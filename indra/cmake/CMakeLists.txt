@@ -39,6 +39,7 @@ set(cmake_SOURCE_FILES
         LLTestCommand.cmake
         LLWindow.cmake
         Linking.cmake
+        LScript.cmake
         NDOF.cmake
         NVAPI.cmake
         OPENAL.cmake

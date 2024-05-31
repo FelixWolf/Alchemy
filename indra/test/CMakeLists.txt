@@ -63,6 +63,7 @@ target_link_libraries(lltest
         llxml
         llcommon
         llcorehttp
+        lscript
         )
 
 if (WINDOWS)
