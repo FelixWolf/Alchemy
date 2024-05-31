@@ -18,3 +18,5 @@ add_subdirectory(lscript_compile)
 add_subdirectory(lscript_execute)
 
 add_subdirectory(lscript_library)
+
+add_subdirectory(tool_compiler)

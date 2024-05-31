@@ -1,5 +1,7 @@
 # -*- cmake -*-
 
+project(lscript_execute)
+
 include(00-Common)
 include(LLCommon)
 include(LLMath)
