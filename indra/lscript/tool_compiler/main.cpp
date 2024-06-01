@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <iostream>
 #include "linden_common.h"
 #include "llerror.h"
 #include "llfile.h"
@@ -9,6 +10,7 @@
 
 int main(int argc, char *argv[])
 {
+    std::cout << "Hello, World!" << std::endl;
     //LLUUID id = LLUUID::generateNewID();
     std::string filepath = "./";
     std::string filename = filepath + "fart.lsl";
@@ -23,7 +25,7 @@ int main(int argc, char *argv[])
                         "796b1537-70d8-497d-934e-0abcc2a60050", //id.asString().c_str(),
                         false))
     {
-        LL_INFOS() << "Compile failed!" << LL_ENDL;
+        std::cout << "Compile failed!" << std::endl;
         //char command[256];
         //sprintf(command, "type %s\n", err_filename.c_str());
         //system(command);
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
                 {
                     line.assign(buffer);
                     LLStringUtil::stripNonprintable(line);
-                    LL_INFOS() << line << LL_ENDL;
+                    std::cerr << line << std::endl;
                 }
             }
             fclose(fp);
@@ -56,7 +58,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        LL_INFOS() << "Compile worked!" << LL_ENDL;
+        std::cout << "Compile worked!" << std::endl;
     }
     return 0;
 }

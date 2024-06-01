@@ -1,5 +1,7 @@
 # -*- cmake -*-
 
+project(lscript)
+
 set(lscript_HEADER_FILES
     llscriptresource.h
     llscriptresourceconsumer.h
@@ -20,3 +22,13 @@ add_subdirectory(lscript_execute)
 add_subdirectory(lscript_library)
 
 add_subdirectory(tool_compiler)
+
+add_library(lscript INTERFACE)
+target_include_directories(lscript INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/lscript_compile
+    ${CMAKE_CURRENT_SOURCE_DIR}/lscript_execute
+    ${CMAKE_CURRENT_SOURCE_DIR}/lscript_library
+)
+target_link_libraries(lscript INTERFACE lscript_compile)
+target_link_libraries(lscript INTERFACE lscript_execute)
+target_link_libraries(lscript INTERFACE lscript_library)
