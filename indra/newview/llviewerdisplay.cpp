@@ -223,11 +223,11 @@ void display_update_camera()
 void display_stats()
 {
     LL_PROFILE_ZONE_SCOPED
-    static const LLCachedControl<F32> fps_log_freq(gSavedSettings, "FPSLogFrequency");
-    if (fps_log_freq > 0.f && gRecentFPSTime.getElapsedTimeF32() >= fps_log_freq)
+    const F32 FPS_LOG_FREQUENCY = 10.f;
+    if (gRecentFPSTime.getElapsedTimeF32() >= FPS_LOG_FREQUENCY)
     {
         LL_PROFILE_ZONE_NAMED_CATEGORY_DISPLAY("DS - FPS");
-        F32 fps = gRecentFrameCount / fps_log_freq;
+        F32 fps = gRecentFrameCount / FPS_LOG_FREQUENCY;
         LL_INFOS() << llformat("FPS: %.02f", fps) << LL_ENDL;
         gRecentFrameCount = 0;
         gRecentFPSTime.reset();
@@ -242,8 +242,8 @@ void display_stats()
         LLMemory::logMemoryInfo(TRUE) ;
         gRecentMemoryTime.reset();
     }
-    static const LLCachedControl<F32> asset_storage_log_freq(gSavedSettings, "AssetStorageLogFrequency");
-    if (asset_storage_log_freq > 0.f && gAssetStorageLogTime.getElapsedTimeF32() >= asset_storage_log_freq)
+    const F32 ASSET_STORAGE_LOG_FREQUENCY = 60.f;
+    if (gAssetStorageLogTime.getElapsedTimeF32() >= ASSET_STORAGE_LOG_FREQUENCY)
     {
         LL_PROFILE_ZONE_NAMED_CATEGORY_DISPLAY("DS - Asset Storage");
         gAssetStorageLogTime.reset();
@@ -700,6 +700,15 @@ void display(BOOL rebuild, F32 zoom_factor, int subfield, BOOL for_snapshot)
 
     if (!gDisconnected)
     {
+        // Render mirrors and associated hero probes before we render the rest of the scene.
+        // This ensures the scene state in the hero probes are exactly the same as the rest of the scene before we render it.
+        if (gPipeline.RenderMirrors && !gSnapshot)
+        {
+            LL_PROFILE_ZONE_NAMED_CATEGORY_DISPLAY("Update hero probes");
+            gPipeline.mHeroProbeManager.update();
+            gPipeline.mHeroProbeManager.renderProbes();
+        }
+
         LL_PROFILE_ZONE_NAMED_CATEGORY_DISPLAY("display - 1");
         LLAppViewer::instance()->pingMainloopTimeout(STR_DISPLAY_UPDATE);
         if (gPipeline.hasRenderType(LLPipeline::RENDER_TYPE_HUD))

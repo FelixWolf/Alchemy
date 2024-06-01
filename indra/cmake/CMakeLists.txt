@@ -24,8 +24,9 @@ set(cmake_SOURCE_FILES
         FMODSTUDIO.cmake
         FreeType.cmake
         GLEXT.cmake
+        GLH.cmake
+        GLM.cmake
         Hunspell.cmake
-        ICU4C.cmake
         LibXML2.cmake
         LLAddBuildTest.cmake
         LLAppearance.cmake
@@ -54,6 +55,8 @@ set(cmake_SOURCE_FILES
         SDL2.cmake
         Sentry.cmake
         TemplateCheck.cmake
+        TinyEXR.cmake
+        TinyGLTF.cmake
         Tracy.cmake
         Tut.cmake
         UI.cmake

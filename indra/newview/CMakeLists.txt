@@ -17,7 +17,6 @@ include(DragDrop)
 include(EXPAT)
 include(FMODSTUDIO)
 include(Hunspell)
-include(ICU4C)
 include(JPEGEncoderBasic)
 include(LibXML2)
 include(LLAppearance)
@@ -39,6 +38,7 @@ include(PNG)
 include(SDBusCPP)
 include(Sentry)
 include(TemplateCheck)
+include(TinyEXR)
 include(ThreeJS)
 include(Tracy)
 include(UI)
@@ -87,6 +87,7 @@ set(viewer_SOURCE_FILES
     ao.cpp
     aoengine.cpp
     aoset.cpp
+    alassetblocklist.cpp
     alavataractions.cpp
     alavatargroups.cpp
     alchatcommand.cpp
@@ -115,6 +116,11 @@ set(viewer_SOURCE_FILES
     bdposingmotion.cpp
     fslslpreproc.cpp
     fslslpreprocviewer.cpp
+    gltfscenemanager.cpp
+    gltf/asset.cpp
+    gltf/accessor.cpp
+    gltf/primitive.cpp
+    gltf/animation.cpp
     groupchatlistener.cpp
     llaccountingcostmanager.cpp
     lladdgridhandler.cpp
@@ -606,6 +612,7 @@ set(viewer_SOURCE_FILES
     llrecentpeople.cpp
     llreflectionmap.cpp
     llreflectionmapmanager.cpp
+    llheroprobemanager.cpp
     llregioninfomodel.cpp
     llregionposition.cpp
     llremoteparcelrequest.cpp
@@ -825,6 +832,7 @@ set(viewer_HEADER_FILES
     ao.h
     aoengine.h
     aoset.h
+    alassetblocklist.h
     alavataractions.h
     alavatargroups.h
     alchatcommand.h
@@ -853,6 +861,12 @@ set(viewer_HEADER_FILES
     bdposingmotion.h
     fslslpreproc.h
     fslslpreprocviewer.h
+    gltfscenemanager.h
+    gltf/asset.h
+    gltf/accessor.h
+    gltf/buffer_util.h
+    gltf/primitive.h
+    gltf/animation.h
     groupchatlistener.h
     llaccountingcost.h
     llaccountingcostmanager.h
@@ -1332,6 +1346,7 @@ set(viewer_HEADER_FILES
     llrecentpeople.h
     llreflectionmap.h
     llreflectionmapmanager.h
+    llheroprobemanager.h
     llregioninfomodel.h
     llregionposition.h
     llremoteparcelrequest.h
@@ -1782,6 +1797,7 @@ set(viewer_APPSETTINGS_FILES
     app_settings/cmd_line.xml
     app_settings/commands.xml
     app_settings/emoji_groups.xml
+    app_settings/foldertypes.xml
     app_settings/grass.xml
     app_settings/ignorable_dialogs.xml
     app_settings/key_bindings.xml
@@ -2127,9 +2143,7 @@ target_link_libraries(${VIEWER_BINARY_NAME}
         llprimitive
         llappearance
         ${LLPHYSICSEXTENSIONS_LIBRARIES}
-        ll::icu4c
         ll::tracy
-        ll::sdbus-cpp
         ll::versioninfo
         )
 

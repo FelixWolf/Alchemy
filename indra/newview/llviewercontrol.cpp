@@ -55,6 +55,7 @@
 #include "llvotree.h"
 #include "llvovolume.h"
 #include "llworld.h"
+#include "llvlcomposition.h"
 #include "pipeline.h"
 #include "llviewerjoystick.h"
 #include "llviewerobjectlist.h"
@@ -126,12 +127,25 @@ static bool handleRenderFarClipChanged(const LLSD& newvalue)
     return false;
 }
 
-static bool handleTerrainDetailChanged(const LLSD& newvalue)
+static bool handleTerrainScaleChanged(const LLSD& newvalue)
 {
-    LLDrawPoolTerrain::sDetailMode = newvalue.asInteger();
+    F64 scale = newvalue.asReal();
+    if (scale != 0.0)
+    {
+        LLDrawPoolTerrain::sDetailScale = F32(1.0 / scale);
+    }
     return true;
 }
 
+static bool handlePBRTerrainScaleChanged(const LLSD& newvalue)
+{
+    F64 scale = newvalue.asReal();
+    if (scale != 0.0)
+    {
+        LLDrawPoolTerrain::sPBRDetailScale = F32(1.0 / scale);
+    }
+    return true;
+}
 
 static bool handleDebugAvatarJointsChanged(const LLSD& newvalue)
 {
@@ -163,6 +177,7 @@ static bool handleSetShaderChanged(const LLSD& newvalue)
     }
 
     // else, leave terrain detail as is
+    gPipeline.releaseGLBuffers();
     LLViewerShaderMgr::instance()->setShaders();
     return true;
 }
@@ -208,7 +223,6 @@ bool handleRenderTransparentWaterChanged(const LLSD& newvalue)
     {
         gPipeline.updateRenderTransparentWater();
         gPipeline.releaseGLBuffers();
-        gPipeline.createGLBuffers();
         LLViewerShaderMgr::instance()->setShaders();
     }
     LLWorld::getInstance()->updateWaterObjects();
@@ -368,15 +382,6 @@ static bool handleChatFontSizeChanged(const LLSD& newvalue)
     return true;
 }
 
-static bool handleChatPersistTimeChanged(const LLSD& newvalue)
-{
-    if(gConsole)
-    {
-        gConsole->setLinePersistTime((F32) newvalue.asReal());
-    }
-    return true;
-}
-
 static bool handleConsoleMaxLinesChanged(const LLSD& newvalue)
 {
     if(gConsole)
@@ -443,9 +448,21 @@ static bool handleReflectionProbeDetailChanged(const LLSD& newvalue)
     {
         LLPipeline::refreshCachedSettings();
         gPipeline.releaseGLBuffers();
-        gPipeline.createGLBuffers();
         LLViewerShaderMgr::instance()->setShaders();
         gPipeline.mReflectionMapManager.reset();
+        gPipeline.mHeroProbeManager.reset();
+    }
+    return true;
+}
+
+static bool handleHeroProbeResolutionChanged(const LLSD &newvalue)
+{
+    if (gPipeline.isInit())
+    {
+        LLPipeline::refreshCachedSettings();
+        gPipeline.mHeroProbeManager.reset();
+        gPipeline.releaseGLBuffers();
+        gPipeline.createGLBuffers();
     }
     return true;
 }
@@ -653,6 +670,18 @@ void handleUserTargetDrawDistanceChanged(const LLSD& newValue)
     LLPerfStats::tunables.userTargetDrawDistance = newval;
 }
 
+void handleUserMinDrawDistanceChanged(const LLSD &newValue)
+{
+    const auto newval = gSavedSettings.getF32("AutoTuneRenderFarClipMin");
+    LLPerfStats::tunables.userMinDrawDistance = newval;
+}
+
+void handleUserTargetReflectionsChanged(const LLSD& newValue)
+{
+    const auto newval = gSavedSettings.getS32("UserTargetReflections");
+    LLPerfStats::tunables.userTargetReflections = newval;
+}
+
 void handlePerformanceStatsEnabledChanged(const LLSD& newValue)
 {
     const auto newval = gSavedSettings.getBOOL("PerfStatsCaptureEnabled");
@@ -672,6 +701,16 @@ void handleFPSTuningStrategyChanged(const LLSD& newValue)
 {
     const auto newval = gSavedSettings.getU32("TuningFPSStrategy");
     LLPerfStats::tunables.userFPSTuningStrategy = newval;
+}
+
+void handleLocalTerrainChanged(const LLSD& newValue)
+{
+    for (U32 i = 0; i < LLTerrainMaterials::ASSET_COUNT; ++i)
+    {
+        const auto setting = gSavedSettings.getString(std::string("LocalTerrainAsset") + std::to_string(i + 1));
+        const LLUUID materialID(setting);
+        gLocalTerrainMaterials.setDetailAssetID(i, materialID);
+    }
 }
 
 void handleNameTagOptionChanged(const LLSD& newvalue)
@@ -733,7 +772,11 @@ void settings_setup_listeners()
 {
     setting_setup_signal_listener(gSavedSettings, "FirstPersonAvatarVisible", handleRenderAvatarMouselookChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderFarClip", handleRenderFarClipChanged);
-    setting_setup_signal_listener(gSavedSettings, "RenderTerrainDetail", handleTerrainDetailChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderTerrainScale", handleTerrainScaleChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderTerrainPBRScale", handlePBRTerrainScaleChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderTerrainPBRDetail", handleSetShaderChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderTerrainPBRPlanarSampleCount", handleSetShaderChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderTerrainPBRTriplanarBlendFactor", handleSetShaderChanged);
     setting_setup_signal_listener(gSavedSettings, "OctreeStaticObjectSizeFactor", handleRepartition);
     setting_setup_signal_listener(gSavedSettings, "OctreeDistanceFactor", handleRepartition);
     setting_setup_signal_listener(gSavedSettings, "OctreeMaxNodeCapacity", handleRepartition);
@@ -775,6 +818,8 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "RenderReflectionProbeDetail", handleReflectionProbeDetailChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderReflectionsEnabled", handleReflectionProbeDetailChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderScreenSpaceReflections", handleReflectionProbeDetailChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderMirrors", handleHeroProbeResolutionChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderHeroProbeResolution", handleHeroProbeResolutionChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderShaderCacheEnabled", handleSetShaderChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderShadowDetail", handleSetShaderChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderDeferredSSAO", handleSetShaderChanged);
@@ -784,7 +829,6 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "RenderPerformanceTest", handleRenderPerfTestChanged);
     setting_setup_signal_listener(gSavedSettings, "ChatFontName", handleChatFontSizeChanged);
     setting_setup_signal_listener(gSavedSettings, "ChatFontSize", handleChatFontSizeChanged);
-    setting_setup_signal_listener(gSavedSettings, "ChatPersistTime", handleChatPersistTimeChanged);
     setting_setup_signal_listener(gSavedSettings, "ConsoleMaxLines", handleConsoleMaxLinesChanged);
     setting_setup_signal_listener(gSavedSettings, "UploadBakedTexOld", handleUploadBakedTexOldChanged);
     setting_setup_signal_listener(gSavedSettings, "UseOcclusion", handleUseOcclusionChanged);
@@ -795,9 +839,6 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "AudioLevelMusic", handleAudioVolumeChanged);
     setting_setup_signal_listener(gSavedSettings, "AudioLevelMedia", handleAudioVolumeChanged);
     setting_setup_signal_listener(gSavedSettings, "AudioLevelVoice", handleAudioVolumeChanged);
-    setting_setup_signal_listener(gSavedSettings, "AudioLevelDoppler", handleAudioVolumeChanged);
-    setting_setup_signal_listener(gSavedSettings, "AudioLevelRolloff", handleAudioVolumeChanged);
-    setting_setup_signal_listener(gSavedSettings, "AudioLevelUnderwaterRolloff", handleAudioVolumeChanged);
     setting_setup_signal_listener(gSavedSettings, "MuteAudio", handleAudioVolumeChanged);
     setting_setup_signal_listener(gSavedSettings, "MuteMusic", handleAudioVolumeChanged);
     setting_setup_signal_listener(gSavedSettings, "MuteMedia", handleAudioVolumeChanged);
@@ -883,9 +924,14 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "RenderAvatarMaxART", handleRenderAvatarMaxARTChanged);
     setting_setup_signal_listener(gSavedSettings, "PerfStatsCaptureEnabled", handlePerformanceStatsEnabledChanged);
     setting_setup_signal_listener(gSavedSettings, "AutoTuneRenderFarClipTarget", handleUserTargetDrawDistanceChanged);
+    setting_setup_signal_listener(gSavedSettings, "AutoTuneRenderFarClipMin", handleUserMinDrawDistanceChanged);
     setting_setup_signal_listener(gSavedSettings, "AutoTuneImpostorFarAwayDistance", handleUserImpostorDistanceChanged);
     setting_setup_signal_listener(gSavedSettings, "AutoTuneImpostorByDistEnabled", handleUserImpostorByDistEnabledChanged);
     setting_setup_signal_listener(gSavedSettings, "TuningFPSStrategy", handleFPSTuningStrategyChanged);
+    setting_setup_signal_listener(gSavedSettings, "LocalTerrainAsset1", handleLocalTerrainChanged);
+    setting_setup_signal_listener(gSavedSettings, "LocalTerrainAsset2", handleLocalTerrainChanged);
+    setting_setup_signal_listener(gSavedSettings, "LocalTerrainAsset3", handleLocalTerrainChanged);
+    setting_setup_signal_listener(gSavedSettings, "LocalTerrainAsset4", handleLocalTerrainChanged);
 
     setting_setup_signal_listener(gSavedPerAccountSettings, "AvatarHoverOffsetZ", handleAvatarHoverOffsetChanged);
 // [RLVa:KB] - Checked: 2015-12-27 (RLVa-1.5.0)
@@ -922,8 +968,6 @@ DECL_LLCC(LLColor4U, LLColor4U(255, 200, 100, 255));
 LLSD test_llsd = LLSD()["testing1"] = LLSD()["testing2"];
 DECL_LLCC(LLSD, test_llsd);
 
-static LLCachedControl<std::string> test_BrowserHomePage("BrowserHomePage", "hahahahahha", "Not the real comment");
-
 void test_cached_control()
 {
 #define do { TEST_LLCC(T, V) if((T)mySetting_##T != V) LL_ERRS() << "Fail "#T << LL_ENDL; } while(0)
@@ -940,8 +984,6 @@ void test_cached_control()
     TEST_LLCC(LLColor3, LLColor3(1.0f, 0.f, 0.5f));
     TEST_LLCC(LLColor4U, LLColor4U(255, 200, 100, 255));
 //There's no LLSD comparsion for LLCC yet. TEST_LLCC(LLSD, test_llsd);
-
-    if((std::string)test_BrowserHomePage != "http://www.secondlife.com") LL_ERRS() << "Fail BrowserHomePage" << LL_ENDL;
 }
 #endif // TEST_CACHED_CONTROL
 

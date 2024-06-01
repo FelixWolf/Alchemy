@@ -52,7 +52,7 @@ if(WINDOWS)
     endif (ADDRESS_SIZE EQUAL 64)
 
     #*******************************
-    # Misc shared libs
+    # Misc shared libs 
 
     set(addrsfx "-x${ADDRESS_SIZE}")
 
@@ -65,13 +65,6 @@ if(WINDOWS)
     set(release_files
         openjp2.dll
         )
-
-    # ICU4C (same filenames for 32 and 64 bit builds)
-    set(release_files ${release_files} icudt75.dll)
-    set(release_files ${release_files} icuin75.dll)
-    set(release_files ${release_files} icuio75.dll)
-    set(release_files ${release_files} icutu75.dll)
-    set(release_files ${release_files} icuuc75.dll)
 
     # Filenames are different for 32/64 bit BugSplat file and we don't
     # have any control over them so need to branch.
@@ -105,7 +98,7 @@ if(WINDOWS)
         set(MSVC_VER 140)
     elseif (MSVC_VERSION GREATER_EQUAL 1920 AND MSVC_VERSION LESS 1930) # Visual Studio 2019
         set(MSVC_VER 140)
-    elseif (MSVC_VERSION GREATER_EQUAL 1930 AND MSVC_VERSION LESS 1940) # Visual Studio 2022
+    elseif (MSVC_VERSION GREATER_EQUAL 1930 AND MSVC_VERSION LESS 1950) # Visual Studio 2022
         set(MSVC_VER 140)
     else (MSVC80)
         MESSAGE(WARNING "New MSVC_VERSION ${MSVC_VERSION} of MSVC: adapt Copy3rdPartyLibs.cmake")

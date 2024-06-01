@@ -71,6 +71,7 @@ const S32 HTTP_PACKET_SIZE = 1496;
 class LLImageFormatted;
 class LLImageRaw;
 class LLColor4U;
+class LLColor3;
 
 typedef enum e_image_codec
 {
@@ -96,15 +97,14 @@ public:
     static void initClass(bool use_new_byte_range = false, S32 minimal_reverse_byte_range_percent = 75);
     static void cleanupClass();
 
-    static const std::string& getLastError();
+    static const std::string& getLastThreadError();
     static void setLastError(const std::string& message);
 
     static bool useNewByteRange() { return sUseNewByteRange; }
     static S32  getReverseByteRangePercent() { return sMinimalReverseByteRangePercent; }
 
 protected:
-    static LLMutex* sMutex;
-    static std::string sLastErrorMessage;
+    static thread_local std::string sLastThreadErrorMessage;
     static bool sUseNewByteRange;
     static S32  sMinimalReverseByteRangePercent;
 };
@@ -208,9 +208,13 @@ public:
 
     void verticalFlip();
 
+    // Returns true if the image is not fully opaque
+    bool checkHasTransparentPixels();
     // if the alpha channel is all 100% opaque, delete it
     // returns true if alpha channel was deleted
     bool optimizeAwayAlpha();
+    // Create an alpha channel if this image doesn't have one
+    bool makeAlpha();
 
     static S32 biasedDimToPowerOfTwo(S32 curr_dim, S32 max_dim = MAX_IMAGE_SIZE);
     static S32 expandDimToPowerOfTwo(S32 curr_dim, S32 max_dim = MAX_IMAGE_SIZE);
@@ -223,6 +227,9 @@ public:
 
     // Fill the buffer with a constant color
     void fill( const LLColor4U& color );
+
+    // Multiply this raw image by the given color
+    void tint( const LLColor3& color );
 
     // Copy operations
 
@@ -270,6 +277,12 @@ public:
     std::string getComment() const { return mComment; }
     std::string mComment;
 
+    // Emissive operations used by minimap
+    // Roughly emulates GLTF emissive texture, but is not GLTF-compliant
+    // *TODO: Remove in favor of shader
+    void addEmissive(LLImageRaw* src);
+    void addEmissiveScaled(LLImageRaw* src);
+    void addEmissiveUnscaled(LLImageRaw* src);
 protected:
     // Create an image from a local file (generally used in tools)
     //bool createFromFile(const std::string& filename, bool j2c_lowest_mip_only = false);

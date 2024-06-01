@@ -49,6 +49,10 @@ LLGLTexture::LLGLTexture(const LLImageRaw* raw, BOOL usemipmaps)
     mUseMipMaps = usemipmaps ;
     // Create an empty image of the specified size and width
     mGLTexturep = new LLImageGL(raw, usemipmaps) ;
+    mFullWidth = mGLTexturep->getCurrentWidth();
+    mFullHeight = mGLTexturep->getCurrentHeight();
+    mComponents = mGLTexturep->getComponents();
+    setTexelsPerImage();
 }
 
 LLGLTexture::~LLGLTexture()
@@ -96,7 +100,8 @@ void LLGLTexture::setBoostLevel(S32 level)
         if(mBoostLevel != LLGLTexture::BOOST_NONE &&
             mBoostLevel != LLGLTexture::BOOST_SELECTED
            && mBoostLevel != LLGLTexture::BOOST_ICON
-           && mBoostLevel != LLGLTexture::BOOST_THUMBNAIL)
+           && mBoostLevel != LLGLTexture::BOOST_THUMBNAIL
+           && mBoostLevel != LLGLTexture::BOOST_TERRAIN)
         {
             setNoDelete() ;
         }

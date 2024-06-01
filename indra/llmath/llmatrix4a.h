@@ -98,6 +98,16 @@ public:
         return mMatrix[0].getF32ptr();
     }
 
+    inline LLMatrix4& asMatrix4()
+    {
+        return *(LLMatrix4*)this;
+    }
+
+    inline const LLMatrix4& asMatrix4() const
+    {
+        return *(LLMatrix4*)this;
+    }
+
     inline void clear()
     {
         mMatrix[0].clear();

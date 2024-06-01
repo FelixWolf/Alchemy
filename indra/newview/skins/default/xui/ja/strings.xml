@@ -718,8 +718,8 @@ https://secondlife.com/viewer-access-faq
 		このタイプのアイテムは、このリージョンのノートカードに添付することができません。
 	</string>
 	<string name="TooltipNotecardOwnerRestrictedDrop">
-		制限のない「次の所有者」の
-許可のみノートカードに
+		「次の所有者」に制限のない
+権限のノートカードのみが
 添付できます。
 	</string>
 	<string name="TooltipTextureRestrictedDrop">
@@ -1381,6 +1381,43 @@ https://secondlife.com/viewer-access-faq
 	</string>
 	<string name="recompile_script_verb">
 		再コンパイル
+	</string>
+	<!-- Text validator error messages -->
+	<string name="Validator_InvalidNumericString">
+		無効な数字の文字列です：『[STR]』
+	</string>
+	<string name="Validator_ShouldNotBeMinus">
+		無効な先頭文字です：「[CH]」（マイナスでは使用できません）
+	</string>
+	<string name="Validator_ShouldNotBeMinusOrZero">
+		無効な先頭文字です：「[CH]」（マイナスまたはゼロは使用できません）
+	</string>
+	<string name="Validator_ShouldBeDigit">
+		無効な文字[NR]です：「[CH]」（数字のみにする必要があります）
+	</string>
+	<string name="Validator_ShouldBeDigitOrDot">
+		無効な文字[NR]です：「[CH]」（数字または小数点のみを指定してください）
+	</string>
+	<string name="Validator_ShouldBeDigitOrAlpha">
+		無効な文字[NR]です：「[CH]」（数字または英数字のアスキー文字のみを使用してください）
+	</string>
+	<string name="Validator_ShouldBeDigitOrAlphaOrSpace">
+		無効な文字[NR]です：「[CH]」（数字、英数字のアスキー文字、またはスペースのみを使用してください）
+	</string>
+	<string name="Validator_ShouldBeDigitOrAlphaOrPunct">
+		無効な文字[NR]です：「[CH]」（数字、英数字のアスキー文字、または句読点のみを使用してください）
+	</string>
+	<string name="Validator_ShouldBeDigitOrAlphaOrPunctNotSpace">
+		無効な文字[NR]です：「[CH]」（数字、英数字のアスキー文字、またはスペースを含まない句読点のみを使用してください）
+	</string>
+	<string name="Validator_ShouldBeDigitNotSpace">
+		無効な文字[NR]です：「[CH]」（スペースを含まない数字のみにする必要があります）
+	</string>
+	<string name="Validator_ShouldBeASCII">
+		無効な文字[NR]です：「[CH]」（アスキー文字のみを使用してください）
+	</string>
+	<string name="Validator_ShouldBeNewLineOrASCII">
+		無効な文字[NR]です：「[CH]」（アスキー文字または改行のみを使用してください）
 	</string>
 	<!-- LSL Usage Hover Tips -->
 	<!-- NOTE: For now these are set as translate="false", until DEV-40761 is implemented (to internationalize the rest of tooltips in the same window).
@@ -4148,7 +4185,7 @@ https://support.secondlife.com よりSecond Lifeのサポートまでお問い�
 		常時許可：（全[MAXACCESS]人中[ALLOWEDAGENTS]人）
 	</string>
 	<string name="RegionInfoAllowedGroups">
-		グループを常に許可：（全[MAXACCESS]グループ中[ALLOWEDGROUPS]グループ）
+		常に許可するグループ：（全[MAXACCESS]グループ中[ALLOWEDGROUPS]グループ）
 	</string>
 	<string name="RegionInfoEstateManagers">
 		不動産マネージャー数：（全[MAXMANAGERS]人中[ESTATEMANAGERS]人）
@@ -4400,6 +4437,12 @@ https://support.secondlife.com よりSecond Lifeのサポートまでお問い�
 	<string name="DoNotDisturbModeResponseDefault">
 		この住民が「取り込み中」をオンにすると、あなたのメッセージが後で表示されるようになります。
 	</string>
+	<string name="RejectFriendshipRequestsResponseDefault">
+		あなたがメッセージを送った住民は、[APP_NAME]ビューアの「フレンドシップのリクエストをすべて拒否する」モードを有効にしています。これは、彼らがフレンドシップのリクエストに邪魔されないよう要求したことを意味します。ＩＭは手動で送信することもできます。
+	</string>
+	<string name="RejectTeleportOffersResponseDefault">
+		あなたがメッセージを送った住民は、[APP_NAME]ビューアの「すべてのテレポートのオファーとリクエストを拒否するモード」を有効にしました。これは、彼らがテレポートのオファーやリクエストに邪魔されないように要求したことを意味します。ＩＭは手動で送信することもできます。
+	</string>
 	<!-- Mute -->
 	<string name="MuteByName">
 		（名前で）
@@ -4450,7 +4493,7 @@ https://support.secondlife.com よりSecond Lifeのサポートまでお問い�
 		月
 	</string>
 	<string name="EnvironmentBloom">
-		花
+		ブルーム
 	</string>
 	<string name="EnvironmentCloudNoise">
 		雲の音
@@ -6972,10 +7015,6 @@ https://alchemyviewer.org/downloads からビューアを再インストール�
 	<string name="dance8">
 		ダンス８
 	</string>
-	<!-- birth date format shared by avatar inspector and profile panels -->
-	<string name="AvatarBirthDateFormat">
-		[year,datetime,slt]年[mthnum,datetime,slt]月[day,datetime,slt]日
-	</string>
 	<string name="DefaultMimeType">
 		none/none
 	</string>
@@ -7508,7 +7547,7 @@ https://alchemyviewer.org/downloads からビューアを再インストール�
 		ＡＯ
 	</string>
 	<string name="Command_Appearance_Label">
-		容姿
+		アウトフィット
 	</string>
 	<string name="Command_Avatar_Label">
 		アバター一式
@@ -7831,7 +7870,7 @@ https://alchemyviewer.org/downloads からビューアを再インストール�
 		（再起動待ち）
 	</string>
 	<string name="RLVaToggleMessageLogin">
-		ＲＬＶａは[STATE]状態です。（再起動する必要はありません）
+		ＲＬＶａは[STATE]です。（再起動する必要はありません）
 	</string>
 	<string name="RLVaToggleMessageRestart">
 		ＲＬＶａは再起動後に[STATE]になります。
@@ -8042,7 +8081,8 @@ www.secondlife.com のウェブサイトに接続できるかご確認くださ�
 		[APP_NAME]プリプロセッサは、[LINENUMBER]行目の命令で無効化されています。
 	</string>
 	<string name="fs_preprocessor_settings_list_prefix">
-		設定：</string>
+		設定：
+	</string>
 	<string name="fs_preprocessor_cpp_exception">
 		[ERR_NAME]（[LINENUMBER]）：[ERR_DESC]
 	</string>
@@ -8153,5 +8193,11 @@ www.secondlife.com のウェブサイトに接続できるかご確認くださ�
 	</string>
 	<string name="MinimapAltToolTipHintMsg">
 		ダブルクリックでテレポート
+	</string>
+	<string name="Temporary">
+		一時的
+	</string>
+	<string name="Permanent">
+		永続的
 	</string>
 </strings>

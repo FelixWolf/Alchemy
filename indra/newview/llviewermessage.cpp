@@ -51,6 +51,7 @@
 #include "llxfermanager.h"
 #include "mean_collision_data.h"
 
+#include "alassetblocklist.h"
 #include "llagent.h"
 #include "llagentbenefits.h"
 #include "llagentcamera.h"
@@ -1677,8 +1678,9 @@ void inventory_offer_mute_callback(const LLUUID& blocked_id,
         const LLUUID& blocked_id;
     };
 
-    LLNotificationsUI::LLChannelManager::getInstance()->killToastsFromChannel(LLUUID(
-            gSavedSettings.getString("NotificationChannelUUID")), OfferMatcher(blocked_id));
+    LLNotificationsUI::LLChannelManager::getInstance()->killToastsFromChannel(
+        LLNotificationsUI::NOTIFICATION_CHANNEL_UUID,
+        OfferMatcher(blocked_id));
 }
 
 
@@ -2449,6 +2451,47 @@ void send_do_not_disturb_message (LLMessageSystem* msg, const LLUUID& from_id, c
         std::string my_name;
         LLAgentUI::buildFullname(my_name);
         std::string response = gSavedPerAccountSettings.getString("DoNotDisturbModeResponse");
+        pack_instant_message(
+            msg,
+            gAgent.getID(),
+            FALSE,
+            gAgent.getSessionID(),
+            from_id,
+            my_name,
+            response,
+            IM_ONLINE,
+            IM_DO_NOT_DISTURB_AUTO_RESPONSE,
+            session_id);
+        gAgent.sendReliableMessage();
+    }
+}
+
+void send_rejecting_tp_offers_message (LLMessageSystem* msg, const LLUUID& from_id, const LLUUID& session_id)
+{
+    std::string my_name;
+    LLAgentUI::buildFullname(my_name);
+    std::string response = gSavedPerAccountSettings.getString("ALRejectTeleportOffersResponse");
+    pack_instant_message(
+        msg,
+        gAgent.getID(),
+        FALSE,
+        gAgent.getSessionID(),
+        from_id,
+        my_name,
+        response,
+        IM_ONLINE,
+        IM_DO_NOT_DISTURB_AUTO_RESPONSE,
+        session_id);
+    gAgent.sendReliableMessage();
+}
+
+void send_rejecting_friendship_requests_message (LLMessageSystem* msg, const LLUUID& from_id, const LLUUID& session_id)
+{
+    if (gAgent.getRejectFriendshipRequests())
+    {
+        std::string my_name;
+        LLAgentUI::buildFullname(my_name);
+        std::string response = gSavedPerAccountSettings.getString("ALRejectFriendshipRequestsResponse");
         pack_instant_message(
             msg,
             gAgent.getID(),
@@ -4212,6 +4255,9 @@ void process_sound_trigger(LLMessageSystem *msg, void **)
     if (gAudiop && gAudiop->isCorruptSound(sound_id))
         return;
 
+    if (ALAssetBlocklist::instance().isBlocked(sound_id))
+        return;
+
     msg->getUUIDFast(_PREHASH_SoundData, _PREHASH_OwnerID, owner_id);
     msg->getUUIDFast(_PREHASH_SoundData, _PREHASH_ObjectID, object_id);
 
@@ -4286,6 +4332,9 @@ void process_preload_sound(LLMessageSystem *msg, void **user_data)
     if (gAudiop->isCorruptSound(sound_id))
         return;
 
+    if (ALAssetBlocklist::instance().isBlocked(sound_id))
+        return;
+
     msg->getUUIDFast(_PREHASH_DataBlock, _PREHASH_ObjectID, object_id);
     msg->getUUIDFast(_PREHASH_DataBlock, _PREHASH_OwnerID, owner_id);
 
@@ -4323,6 +4372,9 @@ void process_attached_sound(LLMessageSystem *msg, void **user_data)
 
     msg->getUUIDFast(_PREHASH_DataBlock, _PREHASH_SoundID, sound_id);
     if (gAudiop && gAudiop->isCorruptSound(sound_id))
+        return;
+
+    if (ALAssetBlocklist::instance().isBlocked(sound_id))
         return;
 
     msg->getUUIDFast(_PREHASH_DataBlock, _PREHASH_ObjectID, object_id);
@@ -6224,8 +6276,9 @@ void script_question_mute(const LLUUID& task_id, const std::string& object_name)
         const LLUUID& blocked_id;
     };
 
-    LLNotificationsUI::LLChannelManager::getInstance()->killToastsFromChannel(LLUUID(
-            gSavedSettings.getString("NotificationChannelUUID")), OfferMatcher(task_id));
+    LLNotificationsUI::LLChannelManager::getInstance()->killToastsFromChannel(
+        LLNotificationsUI::NOTIFICATION_CHANNEL_UUID,
+        OfferMatcher(task_id));
 }
 
 static LLNotificationFunctorRegistration script_question_cb_reg_1("ScriptQuestion", script_question_cb);

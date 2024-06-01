@@ -34,18 +34,19 @@
 #include "llshadermgr.h"
 #include "pipeline.h"
 
+//static
+LLFetchedGLTFMaterial LLFetchedGLTFMaterial::sDefault;
+
 LLFetchedGLTFMaterial::LLFetchedGLTFMaterial()
     : LLGLTFMaterial()
     , mExpectedFlusTime(0.f)
-    , mActive(true)
-    , mFetching(false)
 {
 
 }
 
 LLFetchedGLTFMaterial::~LLFetchedGLTFMaterial()
 {
-
+    
 }
 
 LLFetchedGLTFMaterial& LLFetchedGLTFMaterial::operator=(const LLFetchedGLTFMaterial& rhs)
@@ -76,16 +77,7 @@ void LLFetchedGLTFMaterial::bind(LLViewerTexture* media_tex)
     {
         if (mAlphaMode == LLGLTFMaterial::ALPHA_MODE_MASK)
         {
-            // dividing the alpha cutoff by transparency here allows the shader to compare against
-            // the alpha value of the texture without needing the transparency value
-            if (mBaseColor.mV[3] > 0.f)
-            {
-                min_alpha = mAlphaCutoff / mBaseColor.mV[3];
-            }
-            else
-            {
-                min_alpha = 1024.f;
-            }
+            min_alpha = mAlphaCutoff;
         }
         shader->uniform1f(LLShaderMgr::MINIMUM_ALPHA, min_alpha);
     }
@@ -249,10 +241,11 @@ void LLFetchedGLTFMaterial::onMaterialComplete(std::function<void()> material_co
     materialCompleteCallbacks.push_back(material_complete);
 }
 
-void LLFetchedGLTFMaterial::materialComplete()
+void LLFetchedGLTFMaterial::materialComplete(bool success)
 {
     llassert(mFetching);
     mFetching = false;
+    mFetchSuccess = success;
 
     for (std::function<void()> material_complete : materialCompleteCallbacks)
     {

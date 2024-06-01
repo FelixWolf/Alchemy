@@ -113,6 +113,7 @@
 #include "llscenemonitor.h"
 #include "llprogressview.h"
 #include "llcleanup.h"
+#include "gltfscenemanager.h"
 // [RLVa:KB] - Checked: RLVa-2.0.0
 #include "llvisualeffect.h"
 #include "rlvactions.h"
@@ -214,6 +215,9 @@ F32 LLPipeline::RenderScreenSpaceReflectionDepthRejectBias;
 F32 LLPipeline::RenderScreenSpaceReflectionAdaptiveStepMultiplier;
 S32 LLPipeline::RenderScreenSpaceReflectionGlossySamples;
 S32 LLPipeline::RenderBufferVisualization;
+bool LLPipeline::RenderMirrors;
+S32 LLPipeline::RenderHeroProbeUpdateRate;
+S32 LLPipeline::RenderHeroProbeConservativeUpdateMultiplier;
 F32 LLPipeline::RenderNormalMapScale;
 LLTrace::EventStatHandle<S64> LLPipeline::sStatBatchSize("renderbatchsize");
 
@@ -312,8 +316,8 @@ bool addDeferredAttachments(LLRenderTarget& target, bool for_impostor = false)
 {
     bool valid = true
         && target.addColorAttachment(GL_RGBA) // frag-data[1] specular OR PBR ORM
-        && target.addColorAttachment(GL_RGBA16F)                              // frag_data[2] normal+z+fogmask, See: class1\deferred\materialF.glsl & softenlight
-        && target.addColorAttachment(GL_RGB16F);                  // frag_data[3] PBR emissive
+        && target.addColorAttachment(GL_RGBA16F)                              // frag_data[2] normal+fogmask, See: class1\deferred\materialF.glsl & softenlight
+        && target.addColorAttachment(GL_RGB16F);                  // frag_data[3] PBR emissive OR material env intensity
     return valid;
 }
 
@@ -584,6 +588,9 @@ void LLPipeline::init()
     connectRefreshCachedSettingsSafe("RenderScreenSpaceReflectionAdaptiveStepMultiplier");
     connectRefreshCachedSettingsSafe("RenderScreenSpaceReflectionGlossySamples");
     connectRefreshCachedSettingsSafe("RenderBufferVisualization");
+    connectRefreshCachedSettingsSafe("RenderMirrors");
+    connectRefreshCachedSettingsSafe("RenderHeroProbeUpdateRate");
+    connectRefreshCachedSettingsSafe("RenderHeroProbeConservativeUpdateMultiplier");
     connectRefreshCachedSettingsSafe("RenderNormalMapScale");
     connectRefreshCachedSettingsSafe("RenderAttachedLights");
     connectRefreshCachedSettingsSafe("RenderAttachedParticles");
@@ -676,6 +683,7 @@ void LLPipeline::cleanup()
     mALRenderUtil.reset();
 
     mReflectionMapManager.cleanup();
+    mHeroProbeManager.cleanup();
 }
 
 //============================================================================
@@ -826,42 +834,51 @@ bool LLPipeline::allocateScreenBuffer(U32 resX, U32 resY, U32 samples)
     LL_PROFILE_ZONE_SCOPED_CATEGORY_DISPLAY;
     if (mRT == &mMainRT)
     { // hacky -- allocate auxillary buffer
-        if (sReflectionProbesEnabled)
-        {
-            gCubeSnapshot = TRUE;
-            mReflectionMapManager.initReflectionMaps();
-        }
+
+        gCubeSnapshot = TRUE;
+        mReflectionMapManager.initReflectionMaps();
+
         mRT = &mAuxillaryRT;
         U32 res = mReflectionMapManager.mProbeResolution * 4;  //multiply by 4 because probes will be 16x super sampled
         allocateScreenBuffer(res, res, samples);
+
+        if (RenderMirrors)
+        {
+            mHeroProbeManager.initReflectionMaps();
+            res = mHeroProbeManager.mProbeResolution;  // We also scale the hero probe RT to the probe res since we don't super sample it.
+            mRT = &mHeroProbeRT;
+            allocateScreenBuffer(res, res, samples);
+        }
+
         mRT = &mMainRT;
         gCubeSnapshot = FALSE;
     }
 
-    bool is_aux_alloc = mRT == &mAuxillaryRT;
-
-    U32 res_mod = RenderResolutionDivisor;
-
-    if (res_mod > 1 && res_mod < resX && res_mod < resY)
+    if(!gCubeSnapshot)
     {
-        resX /= res_mod;
-        resY /= res_mod;
+        U32 res_mod = RenderResolutionDivisor;
+
+        if (res_mod > 1 && res_mod < resX && res_mod < resY)
+        {
+            resX /= res_mod;
+            resY /= res_mod;
+        }
+        // [SL:KB] - Patch: Settings-RenderResolutionMultiplier | Checked: Catznip-5.4
+        else if (RenderResolutionMultiplier != 1.f)
+        {
+            resX *= RenderResolutionMultiplier;
+            resY *= RenderResolutionMultiplier;
+        }
+        // [/SL:KB]
     }
-// [SL:KB] - Patch: Settings-RenderResolutionMultiplier | Checked: Catznip-5.4
-    else if (RenderResolutionMultiplier != 1.f)
-    {
-        resX *= RenderResolutionMultiplier;
-        resY *= RenderResolutionMultiplier;
-    }
-// [/SL:KB]
 
     // remember these dimensions
     mRT->width = resX;
     mRT->height = resY;
 
-    if (!is_aux_alloc && RenderUIBuffer)
+    if (RenderUIBuffer && !gCubeSnapshot)
     {
-        if (!mRT->uiScreen.allocate(resX,resY, GL_RGBA))
+        if (!mRT->uiScreen.allocate(resX, resY, GL_RGBA))
         {
             return false;
         }
@@ -880,23 +897,15 @@ bool LLPipeline::allocateScreenBuffer(U32 resX, U32 resY, U32 samples)
 
     mRT->deferredScreen.shareDepthBuffer(mRT->screen);
 
-    //water reflection texture (always needed as scratch space whether or not transparent water is enabled)
-    mWaterDis.allocate(resX, resY, GL_RGBA16F, true);
-
-
-    //if (shadow_detail > 0 || ssao || gSavedSettings.getU32("RenderSharpenMethod") != ALRenderUtil::SHARPEN_NONE)
-    { //only need mRT->deferredLight for shadows OR ssao OR sharpening
-        if (!mRT->deferredLight.allocate(resX, resY, screenFormat)) return false;
-    }
-    //else
-    //{
-    //  mRT->deferredLight.release();
-    //}
+    if (!mRT->deferredLight.allocate(resX, resY, screenFormat)) return false;
 
     allocateShadowBuffer(resX, resY);
 
-    if (!is_aux_alloc)
+    if (!gCubeSnapshot)
     {
+        //water reflection texture (always needed as scratch space whether or not transparent water is enabled)
+        if (!mWaterDis.allocate(resX, resY, GL_RGBA16F, true)) return false;
+
         if (!mSceneMap.allocate(resX, resY, GL_RGB16F, true)) return false;
 
         if (!mPostMap.allocate(resX, resY, GL_RGBA)) return false;
@@ -1123,6 +1132,10 @@ void LLPipeline::refreshCachedSettings()
     RenderScreenSpaceReflectionAdaptiveStepMultiplier = gSavedSettings.getF32("RenderScreenSpaceReflectionAdaptiveStepMultiplier");
     RenderScreenSpaceReflectionGlossySamples = gSavedSettings.getS32("RenderScreenSpaceReflectionGlossySamples");
     RenderBufferVisualization = gSavedSettings.getS32("RenderBufferVisualization");
+    RenderMirrors = gSavedSettings.getBOOL("RenderMirrors");
+    RenderHeroProbeUpdateRate = gSavedSettings.getS32("RenderHeroProbeUpdateRate");
+    RenderHeroProbeConservativeUpdateMultiplier = gSavedSettings.getS32("RenderHeroProbeConservativeUpdateMultiplier");
+
     sReflectionProbesEnabled = LLFeatureManager::getInstance()->isFeatureAvailable("RenderReflectionsEnabled") && gSavedSettings.getBOOL("RenderReflectionsEnabled");
     RenderNormalMapScale = gSavedSettings.getF32("RenderNormalMapScale");
     RenderSpotLight = nullptr;
@@ -1172,7 +1185,6 @@ void LLPipeline::releaseGLBuffers()
 
     releaseLUTBuffers();
 
-    mWaterDis.release();
     mBake.release();
 
     mSceneMap.release();
@@ -1217,9 +1229,21 @@ void LLPipeline::releaseScreenBuffers()
     mRT->screen.release();
     mRT->deferredScreen.release();
     mRT->deferredLight.release();
+    mAuxillaryRT.uiScreen.release();
+    mAuxillaryRT.screen.release();
+    mAuxillaryRT.deferredScreen.release();
+    mAuxillaryRT.deferredLight.release();
+    mHeroProbeRT.uiScreen.release();
+    mHeroProbeRT.screen.release();
+    mHeroProbeRT.deferredScreen.release();
+    mHeroProbeRT.deferredLight.release();
     mPostMap.release();
     mPostFXMap.release();
     mPostHelperMap.release();
+    mSceneMap.release();
+    mWaterDis.release();
+
+    mHeroProbeManager.cleanup();
 }
 
 void LLPipeline::releaseSunShadowTarget(U32 index)
@@ -1995,9 +2019,17 @@ void LLPipeline::updateMovedList(LLDrawable::drawable_vector_t& moved_list)
 {
     LL_PROFILE_ZONE_SCOPED;
     LLDrawable::drawable_vector_t newList; // removing elements in the middle of a vector is a really bad idea. I'll just create a new one and swap it at the end.
-
-    for (LLDrawable* drawablep : moved_list)
+	
+    for (LLDrawable::drawable_vector_t::iterator iter = moved_list.begin();
+         iter != moved_list.end(); )
     {
+        LLDrawable::drawable_vector_t::iterator curiter = iter++;
+        LLDrawable *drawablep = *curiter;
+        if (!drawablep)
+        {
+            iter = moved_list.erase(curiter);
+            continue;
+        }
         bool done = true;
         if (!drawablep->isDead() && (!drawablep->isState(LLDrawable::EARLY_MOVE)))
         {
@@ -2376,7 +2408,8 @@ static LLTrace::BlockTimerStatHandle FTM_CULL("Object Culling");
 // static
 bool LLPipeline::isWaterClip()
 {
-    return (!sRenderTransparentWater || gCubeSnapshot) && !sRenderingHUDs;
+    // We always pretend that we're not clipping water when rendering mirrors.
+    return (gPipeline.mHeroProbeManager.isMirrorPass()) ? false : (!sRenderTransparentWater || gCubeSnapshot) && !sRenderingHUDs;
 }
 
 void LLPipeline::updateCull(LLCamera& camera, LLCullResult& result)
@@ -2542,6 +2575,26 @@ void LLPipeline::doOcclusion(LLCamera& camera)
         mCubeVB->setBuffer();
 
         mReflectionMapManager.doOcclusion();
+        gOcclusionCubeProgram.unbind();
+
+        gGL.setColorMask(true, true);
+    }
+
+    if (sReflectionProbesEnabled && sUseOcclusion > 1 && !LLPipeline::sShadowRender && !gCubeSnapshot)
+    {
+        gGL.setColorMask(false, false);
+        LLGLDepthTest depth(GL_TRUE, GL_FALSE);
+        LLGLDisable cull(GL_CULL_FACE);
+
+        gOcclusionCubeProgram.bind();
+
+        if (mCubeVB.isNull())
+        { //cube VB will be used for issuing occlusion queries
+            mCubeVB = ll_create_cube_vb(LLVertexBuffer::MAP_VERTEX);
+        }
+        mCubeVB->setBuffer();
+
+        mHeroProbeManager.doOcclusion();
         gOcclusionCubeProgram.unbind();
 
         gGL.setColorMask(true, true);
@@ -3908,6 +3961,7 @@ void LLPipeline::renderGeomDeferred(LLCamera& camera, bool do_occlusion)
         {
             //update reflection probe uniform
             mReflectionMapManager.updateUniforms();
+            mHeroProbeManager.updateUniforms();
         }
 
         U32 cur_type = 0;
@@ -4610,6 +4664,8 @@ void LLPipeline::renderDebug()
         }
     }
 
+    LL::GLTFSceneManager::instance().renderDebug();
+
     if (gPipeline.hasRenderDebugMask(LLPipeline::RENDER_DEBUG_OCCLUSION))
     { //render visible selected group occlusion geometry
         gDebugProgram.bind();
@@ -5275,7 +5331,7 @@ void LLPipeline::setupAvatarLights(bool for_edit)
         light->setSpotExponent(0.f);
         light->setSpotCutoff(180.f);
     }
-    else if (gAvatarBacklight) // Always true (unless overridden in a devs .ini)
+    else if (gAvatarBacklight)
     {
         LLVector3 light_dir = sun_up ? LLVector3(mSunDir) : LLVector3(mMoonDir);
         LLVector3 opposite_pos = -light_dir;
@@ -6385,6 +6441,8 @@ LLViewerObject* LLPipeline::lineSegmentIntersectInWorld(const LLVector4a& start,
                                                         bool pick_unselectable,
                                                         bool pick_reflection_probe,
                                                         S32* face_hit,
+                                                        S32* gltf_node_hit,
+                                                        S32* gltf_primitive_hit,
                                                         LLVector4a* intersection,         // return the intersection point
                                                         LLVector2* tex_coord,            // return the texture coordinates of the intersection point
                                                         LLVector4a* normal,               // return the surface normal at the intersection point
@@ -6523,6 +6581,25 @@ LLViewerObject* LLPipeline::lineSegmentIntersectInWorld(const LLVector4a& start,
         }
     }
 
+    S32 node_hit = -1;
+    S32 primitive_hit = -1;
+    LLDrawable* hit = LL::GLTFSceneManager::instance().lineSegmentIntersect(start, local_end, pick_transparent, pick_rigged, pick_unselectable, pick_reflection_probe, &node_hit, &primitive_hit, &position, tex_coord, normal, tangent);
+    if (hit)
+    {
+        drawable = hit;
+        local_end = position;
+    }
+
+    if (gltf_node_hit)
+    {
+        *gltf_node_hit = node_hit;
+    }
+
+    if (gltf_primitive_hit)
+    {
+        *gltf_primitive_hit = primitive_hit;
+    }
+
     if (intersection)
     {
         *intersection = position;
@@ -6635,6 +6712,15 @@ void LLPipeline::renderGLTFObjects(U32 type, bool texture, bool rigged)
 
     gGL.loadMatrix(gGLModelView);
     gGLLastMatrix = NULL;
+
+    if (!rigged)
+    {
+        LL::GLTFSceneManager::instance().renderOpaque();
+    }
+    else
+    {
+        LL::GLTFSceneManager::instance().render(true, true);
+    }
 }
 
 // Currently only used for shadows -Cosmic,2023-04-19
@@ -6937,6 +7023,8 @@ void LLPipeline::generateExposure(LLRenderTarget* src, LLRenderTarget* dst, bool
     }
 }
 
+extern LLPointer<LLImageGL> gEXRImage;
+
 void LLPipeline::gammaCorrect(LLRenderTarget* src, LLRenderTarget* dst) {
     dst->bindTarget();
     // gamma correct lighting
@@ -6973,8 +7061,10 @@ void LLPipeline::gammaCorrect(LLRenderTarget* src, LLRenderTarget* dst) {
         F32 e = llclamp(exposure(), 0.5f, 4.f);
 
         static LLStaticHashedString s_exposure("exposure");
+        static LLStaticHashedString aces_mix("aces_mix");
 
         shader.uniform1f(s_exposure, e);
+        shader.uniform1f(aces_mix, gEXRImage.notNull() ? 0.f : 0.3f);
 
         mScreenTriangleVB->setBuffer();
         mScreenTriangleVB->drawArrays(LLRender::TRIANGLES, 0, 3);
@@ -7309,7 +7399,7 @@ void LLPipeline::renderDoF(LLRenderTarget* src, LLRenderTarget* dst)
                         LLVector4a result;
                         result.clear();
 
-                        gViewerWindow->cursorIntersect(-1, -1, 512.f, NULL, -1, FALSE, FALSE, TRUE, TRUE, NULL, &result);
+                        gViewerWindow->cursorIntersect(-1, -1, 512.f, NULL, -1, FALSE, FALSE, TRUE, TRUE, nullptr, nullptr, nullptr, &result);
 
                         focus_point.set(result.getF32ptr());
                     }
@@ -8337,6 +8427,7 @@ void LLPipeline::renderDeferredLighting()
                           LLPipeline::RENDER_TYPE_CONTROL_AV,
                           LLPipeline::RENDER_TYPE_ALPHA_MASK,
                           LLPipeline::RENDER_TYPE_FULLBRIGHT_ALPHA_MASK,
+                          LLPipeline::RENDER_TYPE_TERRAIN,
                           LLPipeline::RENDER_TYPE_WATER,
                           END_RENDER_TYPES);
 
@@ -8739,6 +8830,17 @@ void LLPipeline::bindReflectionProbes(LLGLSLShader& shader)
         mReflectionMapManager.mIrradianceMaps->bind(channel);
         bound = true;
     }
+
+    if (RenderMirrors)
+    {
+        channel = shader.enableTexture(LLShaderMgr::HERO_PROBE, LLTexUnit::TT_CUBE_MAP_ARRAY);
+        if (channel > -1 && mHeroProbeManager.mTexture.notNull())
+        {
+            mHeroProbeManager.mTexture->bind(channel);
+            bound = true;
+        }
+    }
+
 
     if (bound)
     {
@@ -10959,3 +11061,12 @@ void LLPipeline::rebuildDrawInfo()
     }
 }
 
+void LLPipeline::rebuildTerrain()
+{
+    for (LLWorld::region_list_t::const_iterator iter = LLWorld::getInstance()->getRegionList().begin();
+        iter != LLWorld::getInstance()->getRegionList().end(); ++iter)
+    {
+        LLViewerRegion* region = *iter;
+        region->dirtyAllPatches();
+    }
+}

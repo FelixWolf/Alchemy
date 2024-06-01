@@ -445,6 +445,7 @@ LLAgent::LLAgent() :
     mFrameAgent(),
 
     mIsDoNotDisturb(false),
+    mIsRejectTeleportOffers(false),
     mIgnorePrejump(FALSE),
 
     mControlFlags(0x00000000),
@@ -530,6 +531,10 @@ void LLAgent::init()
     auto controlp = gSavedSettings.getControl("AlchemyMotionResetsCamera");
     controlp->getSignal()->connect([&](LLControlVariable* control, const LLSD& new_val, const LLSD&) { mMovementResetCamera = new_val.asBoolean(); });
     mMovementResetCamera = controlp->getValue().asBoolean();
+
+    selectRejectFriendshipRequests(gSavedPerAccountSettings.getBOOL("ALRejectFriendshipRequestsMode"));
+    setRejectTeleportOffers(gSavedPerAccountSettings.getBOOL("ALRejectTeleportOffersMode"));
+
 
     if (!mTeleportFinishedSlot.connected())
     {
@@ -1544,8 +1549,6 @@ void LLAgent::pitch(F32 angle)
 
     static LLCachedControl<bool> useRealisticMouselook(gSavedSettings, "AlchemyRealisticMouselook", false);
     const bool in_mouselook = gAgentCamera.cameraMouselook();
-    const F32 look_down_limit = (in_mouselook && useRealisticMouselook ? 160.f : (isAgentAvatarValid() && gAgentAvatarp->isSitting() ? 170.f : 179.f)) * DEG_TO_RAD;
-
 
     // clamp pitch to limits
     if (angle >= 0.f)
@@ -1745,6 +1748,57 @@ bool LLAgent::isDoNotDisturb() const
     return mIsDoNotDisturb;
 }
 
+//-----------------------------------------------------------------------------
+// setRejectTeleportOffers()
+//-----------------------------------------------------------------------------
+void LLAgent::setRejectTeleportOffers(bool pIsRejectTeleportOffers)
+{
+    LL_INFOS() << "Setting rejecting teleport offers mode to " << pIsRejectTeleportOffers << LL_ENDL;
+    mIsRejectTeleportOffers = pIsRejectTeleportOffers;
+    gSavedPerAccountSettings.setBOOL("ALRejectTeleportOffersMode", pIsRejectTeleportOffers);
+}
+
+//-----------------------------------------------------------------------------
+// isRejectTeleportOffers()
+//-----------------------------------------------------------------------------
+bool LLAgent::isRejectTeleportOffers() const
+{
+    return mIsRejectTeleportOffers;
+}
+
+//-----------------------------------------------------------------------------
+// setRejectFriendshipRequests()
+//-----------------------------------------------------------------------------
+void LLAgent::setRejectFriendshipRequests()
+{
+    selectRejectFriendshipRequests(TRUE);
+}
+
+//-----------------------------------------------------------------------------
+// clearRejectFriendshipRequests()
+//-----------------------------------------------------------------------------
+void LLAgent::clearRejectFriendshipRequests()
+{
+    selectRejectFriendshipRequests(FALSE);
+}
+
+//-----------------------------------------------------------------------------
+// selectRejectFriendshipRequests()
+//-----------------------------------------------------------------------------
+void LLAgent::selectRejectFriendshipRequests(BOOL selected)
+{
+    LL_INFOS() << "Setting rejecting friendship requests mode to " << selected << LL_ENDL;
+    mIsRejectFriendshipRequests = selected;
+    gSavedPerAccountSettings.setBOOL("ALRejectFriendshipRequestsMode", selected);
+}
+
+//-----------------------------------------------------------------------------
+// getRejectFriendshipRequests()
+//-----------------------------------------------------------------------------
+BOOL LLAgent::getRejectFriendshipRequests() const
+{
+    return mIsRejectFriendshipRequests;
+}
 
 //-----------------------------------------------------------------------------
 // startAutoPilotGlobal()

@@ -2041,8 +2041,8 @@ LLVector3d LLAgentCamera::calcCameraPositionTargetGlobal(BOOL *hit_limit)
                     }
                     else
                     {
-                        static const LLCachedControl<F32> dyn_cam_strength(gSavedSettings, "DynamicCameraStrength");
-                        target_lag = vel * dyn_cam_strength / 30.f;
+                        LLCachedControl<F32> dynamic_camera_strength(gSavedSettings, "DynamicCameraStrength");
+                        target_lag = vel * dynamic_camera_strength / 30.f;
                     }
 
                     mCameraLag = lerp(mCameraLag, target_lag, lag_interp);
@@ -2794,7 +2794,7 @@ void LLAgentCamera::setFocusGlobal(const LLPickInfo& pick)
 {
     LLViewerObject* objectp = gObjectList.findObject(pick.mObjectID);
 
-    if (objectp)
+    if (objectp && pick.mGLTFNodeIndex == -1)
     {
         // focus on object plus designated offset
         // which may or may not be same as pick.mPosGlobal

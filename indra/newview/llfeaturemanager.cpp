@@ -602,8 +602,9 @@ void LLFeatureManager::setGraphicsLevel(U32 level, bool skipFeatures)
     applyFeatures(skipFeatures);
 
     LLViewerShaderMgr::sSkipReload = false;
-    LLViewerShaderMgr::instance()->setShaders();
     gPipeline.refreshCachedSettings();
+    gPipeline.releaseGLBuffers();
+    LLViewerShaderMgr::instance()->setShaders();
 }
 
 void LLFeatureManager::applyBaseMasks()
@@ -662,6 +663,10 @@ void LLFeatureManager::applyBaseMasks()
     if (gGLManager.mNumTextureImageUnits <= 8)
     {
         maskFeatures("TexUnit8orLess");
+    }
+    if (gGLManager.mNumTextureImageUnits <= 16)
+    {
+        maskFeatures("TexUnit16orLess");
     }
     if (gGLManager.mVRAM > 512)
     {

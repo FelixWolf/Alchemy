@@ -240,6 +240,7 @@
 #include "pipeline.h"
 #include "llgesturemgr.h"
 #include "llsky.h"
+#include "llvlcomposition.h"
 #include "llvlmanager.h"
 #include "llviewercamera.h"
 #include "lldrawpoolbump.h"
@@ -250,6 +251,8 @@
 #include "llavatariconctrl.h"
 #include "llgroupiconctrl.h"
 #include "llviewerassetstats.h"
+#include "gltfscenemanager.h"
+
 #include "workqueue.h"
 using namespace LL;
 
@@ -541,13 +544,6 @@ bool    create_text_segment_icon_from_url_match(LLUrlMatch* match,LLTextBase* ba
 // or for things that are performance critical.  JC
 static void settings_to_globals()
 {
-    LLBUTTON_H_PAD      = gSavedSettings.getS32("ButtonHPad");
-    BTN_HEIGHT_SMALL    = gSavedSettings.getS32("ButtonHeightSmall");
-    BTN_HEIGHT          = gSavedSettings.getS32("ButtonHeight");
-
-    MENU_BAR_HEIGHT     = gSavedSettings.getS32("MenuBarHeight");
-    MENU_BAR_WIDTH      = gSavedSettings.getS32("MenuBarWidth");
-
     LLSurface::setTextureSize(gSavedSettings.getU32("RegionTextureSize"));
 
 #if LL_DARWIN
@@ -1227,6 +1223,8 @@ bool LLAppViewer::init()
     LLWorld::createInstance();
     LLSelectMgr::createInstance();
     LLViewerCamera::createInstance();
+    LL::GLTFSceneManager::createInstance();
+
 
 #if LL_WINDOWS
     if (!mSecondInstance)
@@ -2103,7 +2101,7 @@ bool LLAppViewer::cleanup()
     ll_close_fail_log();
 
     LLError::LLCallStacks::cleanup();
-
+    LL::GLTFSceneManager::deleteSingleton();
     LLEnvironment::deleteSingleton();
     LLSelectMgr::deleteSingleton();
     LLViewerEventRecorder::deleteSingleton();
@@ -4184,7 +4182,8 @@ bool LLAppViewer::initCache()
         LLAppViewer::getTextureCache()->initCache(LL_PATH_CACHE, texture_cache_size, texture_cache_mismatch);
     }
 
-    LLVOCache::getInstance()->initCache(LL_PATH_CACHE, gSavedSettings.getU32("CacheNumberOfRegionsForObjects"), getObjectCacheVersion());
+    const U32 CACHE_NUMBER_OF_REGIONS_FOR_OBJECTS = 128;
+    LLVOCache::getInstance()->initCache(LL_PATH_CACHE, CACHE_NUMBER_OF_REGIONS_FOR_OBJECTS, getObjectCacheVersion());
 
     return true;
 }
@@ -4852,6 +4851,7 @@ void LLAppViewer::idle()
         if (!(logoutRequestSent() && hasSavedFinalSnapshot()))
         {
             gObjectList.update(gAgent);
+            LL::GLTFSceneManager::instance().update();
         }
     }
 

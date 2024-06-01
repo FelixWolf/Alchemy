@@ -392,9 +392,9 @@ LLFloaterPreference::LLFloaterPreference(const LLSD& key)
 
 void LLFloaterPreference::processProperties( void* pData, EAvatarProcessorType type )
 {
-    if ( APT_PROPERTIES == type )
+    if ( APT_PROPERTIES_LEGACY == type )
     {
-        const LLAvatarData* pAvatarData = static_cast<const LLAvatarData*>( pData );
+        const LLAvatarLegacyData* pAvatarData = static_cast<const LLAvatarLegacyData*>( pData );
         if (pAvatarData && (gAgent.getID() == pAvatarData->avatar_id) && (pAvatarData->avatar_id.notNull()))
         {
             mAllowPublish = (bool)(pAvatarData->flags & AVATAR_ALLOW_PUBLISH);
@@ -487,6 +487,8 @@ BOOL LLFloaterPreference::postBuild()
     if (LLStartUp::getStartupState() < STATE_STARTED)
     {
         gSavedPerAccountSettings.setString("DoNotDisturbModeResponse", LLTrans::getString("DoNotDisturbModeResponseDefault"));
+        gSavedPerAccountSettings.setString("ALRejectTeleportOffersResponse", LLTrans::getString("RejectTeleportOffersResponseDefault"));
+        gSavedPerAccountSettings.setString("ALRejectFriendshipRequestsResponse", LLTrans::getString("RejectFriendshipRequestsResponseDefault"));
     }
 
     // set 'enable' property for 'Clear log...' button
@@ -544,7 +546,7 @@ BOOL LLFloaterPreference::postBuild()
 
 void LLFloaterPreference::updateDeleteTranscriptsButton()
 {
-    getChild<LLButton>("delete_transcripts")->setEnabled(LLLogChat::anyTranscriptsExist());
+    getChild<LLButton>("delete_transcripts")->setEnabled(LLLogChat::transcriptFilesExist());
 }
 
 void LLFloaterPreference::onDoNotDisturbResponseChanged()
@@ -555,6 +557,21 @@ void LLFloaterPreference::onDoNotDisturbResponseChanged()
                     != getChild<LLUICtrl>("do_not_disturb_response")->getValue().asString();
 
     gSavedPerAccountSettings.setBOOL("DoNotDisturbResponseChanged", response_changed_flag );
+
+    bool reject_friendship_requests_response_changed_flag =
+            LLTrans::getString("RejectFriendshipRequestsResponseDefault")
+                != getChild<LLUICtrl>("autorespond_reject_friends_response")->getValue().asString();
+
+    gSavedPerAccountSettings.setBOOL("ALRejectFriendshipRequestsChanged", reject_friendship_requests_response_changed_flag);
+}
+
+void LLFloaterPreference::onRejectTeleportOffersResponseChanged()
+{
+    bool reject_teleport_offers_response_changed_flag =
+            LLTrans::getString("RejectTeleportOffersResponseDefault")
+                    != getChild<LLUICtrl>("autorespond_rto_response")->getValue().asString();
+
+    gSavedPerAccountSettings.setBOOL("ALRejectTeleportOffersResponseChanged", reject_teleport_offers_response_changed_flag);
 }
 
 #if !LL_HAVOK
@@ -673,7 +690,7 @@ skin_t manifestFromJson(const std::string& filename, const ESkinType type)
     in.open(filename);
     if (in.is_open())
     {
-        boost::json::error_code ec;
+        boost::system::error_code ec;
         auto root = boost::json::parse(in, ec);
         if (!ec.failed() && root.is_object())
         {
@@ -786,7 +803,7 @@ void LLFloaterPreference::onAddSkinCallback(const std::vector<std::string>& file
             ss << std::string(const_cast<const char*>(buf.get()), buf_size);
             buf.reset();
 
-            boost::json::error_code ec;
+            boost::system::error_code ec;
             auto root = boost::json::parse(ss, ec);
             if (!ec.failed() && root.is_object())
             {
@@ -933,6 +950,7 @@ LLFloaterPreference::~LLFloaterPreference()
     LLConversationLog::instance().removeObserver(this);
     mComplexityChangedSignal.disconnect();
     mDnDModeConnection.disconnect();
+    mRejectTeleportConnection.disconnect();
 }
 
 void LLFloaterPreference::draw()
@@ -1078,7 +1096,6 @@ void LLFloaterPreference::cancel()
 
 void LLFloaterPreference::onOpen(const LLSD& key)
 {
-
     // this variable and if that follows it are used to properly handle do not disturb mode response message
     // if user is logged in and we haven't initialized do not disturb mode response yet, do it
     if (!mDnDInit && LLStartUp::getStartupState() == STATE_STARTED)
@@ -1093,6 +1110,9 @@ void LLFloaterPreference::onOpen(const LLSD& key)
         // this connection is needed to properly set "DoNotDisturbResponseChanged" setting when user makes changes in
         // do not disturb response message.
         mDnDModeConnection = gSavedPerAccountSettings.getControl("DoNotDisturbModeResponse")->getSignal()->connect(boost::bind(&LLFloaterPreference::onDoNotDisturbResponseChanged, this));
+
+        mRejectTeleportConnection =  gSavedPerAccountSettings.getControl("ALRejectTeleportOffersResponse")->getSignal()->connect(boost::bind(&LLFloaterPreference::onRejectTeleportOffersResponseChanged, this));
+
     }
     gAgent.sendAgentUserInfoRequest();
 
@@ -1104,7 +1124,7 @@ void LLFloaterPreference::onOpen(const LLSD& key)
         (gAgent.isMature() || gAgent.isGodlike());
 
     LLComboBox* maturity_combo = getChild<LLComboBox>("maturity_desired_combobox");
-    LLAvatarPropertiesProcessor::getInstance()->sendAvatarPropertiesRequest( gAgent.getID() );
+    LLAvatarPropertiesProcessor::getInstance()->sendAvatarLegacyPropertiesRequest( gAgent.getID() );
     if (can_choose_maturity)
     {
         // if they're not adult or a god, they shouldn't see the adult selection, so delete it
@@ -1201,6 +1221,11 @@ void LLFloaterPreference::initDoNotDisturbResponse()
         {
             //LLTrans::getString("DoNotDisturbModeResponseDefault") is used here for localization (EXT-5885)
             gSavedPerAccountSettings.setString("DoNotDisturbModeResponse", LLTrans::getString("DoNotDisturbModeResponseDefault"));
+        }
+
+        if (!gSavedPerAccountSettings.getBOOL("ALRejectFriendshipRequestsChanged"))
+        {
+            gSavedPerAccountSettings.setString("ALRejectFriendshipRequestsResponse", LLTrans::getString("RejectFriendshipRequestsResponseDefault"));
         }
     }
 

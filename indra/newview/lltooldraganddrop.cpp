@@ -305,12 +305,10 @@ void LLToolDragAndDrop::setDragStart(S32 x, S32 y)
 
 BOOL LLToolDragAndDrop::isOverThreshold(S32 x,S32 y)
 {
-    static LLCachedControl<S32> drag_and_drop_threshold(gSavedSettings,"DragAndDropDistanceThreshold", 3);
-
     S32 mouse_delta_x = x - mDragStartX;
     S32 mouse_delta_y = y - mDragStartY;
 
-    return (mouse_delta_x * mouse_delta_x) + (mouse_delta_y * mouse_delta_y) > drag_and_drop_threshold * drag_and_drop_threshold;
+    return (mouse_delta_x * mouse_delta_x) + (mouse_delta_y * mouse_delta_y) > DRAG_N_DROP_DISTANCE_THRESHOLD * DRAG_N_DROP_DISTANCE_THRESHOLD;
 }
 
 void LLToolDragAndDrop::beginDrag(EDragAndDropType type,
@@ -575,12 +573,13 @@ BOOL LLToolDragAndDrop::handleKey(KEY key, MASK mask)
 
 BOOL LLToolDragAndDrop::handleToolTip(S32 x, S32 y, MASK mask)
 {
+    const F32 DRAG_N_DROP_TOOLTIP_DELAY = 0.10000000149f;
     if (!mToolTipMsg.empty())
     {
         LLToolTipMgr::instance().unblockToolTips();
         LLToolTipMgr::instance().show(LLToolTip::Params()
             .message(mToolTipMsg)
-            .delay_time(gSavedSettings.getF32( "DragAndDropToolTipDelay" )));
+            .delay_time(DRAG_N_DROP_TOOLTIP_DELAY));
         return TRUE;
     }
     return FALSE;
@@ -1083,51 +1082,71 @@ void set_texture_to_material(LLViewerObject* hit_obj,
                              LLGLTFMaterial::TextureInfo drop_channel)
 {
     LLTextureEntry* te = hit_obj->getTE(hit_face);
-    if (te)
+    if (!te)
     {
-        LLPointer<LLGLTFMaterial> material = te->getGLTFMaterialOverride();
-
-        // make a copy to not invalidate existing
-        // material for multiple objects
-        if (material.isNull())
-        {
-            // Start with a material override which does not make any changes
-            material = new LLGLTFMaterial();
-        }
-        else
-        {
-            material = new LLGLTFMaterial(*material);
-        }
-
-        switch (drop_channel)
-        {
-            case LLGLTFMaterial::GLTF_TEXTURE_INFO_BASE_COLOR:
-            default:
-                {
-                    material->setBaseColorId(asset_id);
-                }
-                break;
-
-            case LLGLTFMaterial::GLTF_TEXTURE_INFO_METALLIC_ROUGHNESS:
-                {
-                    material->setOcclusionRoughnessMetallicId(asset_id);
-                }
-                break;
-
-            case LLGLTFMaterial::GLTF_TEXTURE_INFO_EMISSIVE:
-                {
-                    material->setEmissiveId(asset_id);
-                }
-                break;
-
-            case LLGLTFMaterial::GLTF_TEXTURE_INFO_NORMAL:
-                {
-                    material->setNormalId(asset_id);
-                }
-                break;
-        }
-        LLGLTFMaterialList::queueModify(hit_obj, hit_face, material);
+        return;
     }
+
+    const LLUUID base_mat_id = hit_obj->getRenderMaterialID(hit_face);
+    if (base_mat_id.isNull())
+    {
+        return;
+    }
+
+    if (hit_obj->isInventoryDirty() && hit_obj->hasInventoryListeners())
+    {
+        hit_obj->requestInventory();
+        return;
+    }
+
+    LLViewerInventoryItem* mat_item = hit_obj->getInventoryItemByAsset(base_mat_id);
+    if (mat_item && !mat_item->getPermissions().allowModifyBy(gAgentID))
+    {
+        return;
+    }
+
+    LLPointer<LLGLTFMaterial> material = te->getGLTFMaterialOverride();
+
+    // make a copy to not invalidate existing
+    // material for multiple objects
+    if (material.isNull())
+    {
+        // Start with a material override which does not make any changes
+        material = new LLGLTFMaterial();
+    }
+    else
+    {
+        material = new LLGLTFMaterial(*material);
+    }
+
+    switch (drop_channel)
+    {
+        case LLGLTFMaterial::GLTF_TEXTURE_INFO_BASE_COLOR:
+        default:
+            {
+                material->setBaseColorId(asset_id);
+            }
+            break;
+
+        case LLGLTFMaterial::GLTF_TEXTURE_INFO_METALLIC_ROUGHNESS:
+            {
+                material->setOcclusionRoughnessMetallicId(asset_id);
+            }
+            break;
+
+        case LLGLTFMaterial::GLTF_TEXTURE_INFO_EMISSIVE:
+            {
+                material->setEmissiveId(asset_id);
+            }
+            break;
+
+        case LLGLTFMaterial::GLTF_TEXTURE_INFO_NORMAL:
+            {
+                material->setNormalId(asset_id);
+            }
+            break;
+    }
+    LLGLTFMaterialList::queueModify(hit_obj, hit_face, material);
 }
 
 void LLToolDragAndDrop::dropTextureAllFaces(LLViewerObject* hit_obj,
@@ -1268,7 +1287,7 @@ void LLToolDragAndDrop::dropMaterialOneFace(LLViewerObject* hit_obj,
     if (asset_id.isNull())
     {
         // use blank material
-        asset_id = LLGLTFMaterialList::BLANK_MATERIAL_ASSET_ID;
+        asset_id = BLANK_MATERIAL_ASSET_ID;
     }
 
     hit_obj->setRenderMaterialID(hit_face, asset_id);
@@ -1304,7 +1323,7 @@ void LLToolDragAndDrop::dropMaterialAllFaces(LLViewerObject* hit_obj,
     if (asset_id.isNull())
     {
         // use blank material
-        asset_id = LLGLTFMaterialList::BLANK_MATERIAL_ASSET_ID;
+        asset_id = BLANK_MATERIAL_ASSET_ID;
     }
 
     hit_obj->setRenderMaterialIDs(asset_id);

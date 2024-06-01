@@ -160,13 +160,16 @@ public:
 
     // Draw lines in the dirt showing ownership. Return number of
     // vertices drawn.
-    S32 renderPropertyLines();
+    void renderPropertyLines();
     void renderPropertyLinesOnMinimap(F32 scale_pixels_per_meter, const F32* parcel_outline_color);
 
 
     // Call this whenever you change the height data in the region.
     // (Automatically called by LLSurfacePatch's update routine)
     void dirtyHeights();
+    // Call this whenever you want to force all terrain to rebuild.
+    // (For example, if a global terrain config option has changed)
+    void dirtyAllPatches();
 
     LLViewerParcelOverlay *getParcelOverlay() const
             { return mParcelOverlay; }

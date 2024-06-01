@@ -485,8 +485,21 @@ public:
 public:
     void            setDoNotDisturb(bool pIsDoNotDisturb);
     bool            isDoNotDisturb() const;
+
+public:
+    void            setRejectTeleportOffers(bool pIsRejectTeleportOffers);
+    bool            isRejectTeleportOffers() const;
 private:
     bool            mIsDoNotDisturb;
+    bool            mIsRejectTeleportOffers;
+
+public:
+    void            setRejectFriendshipRequests();
+    void            clearRejectFriendshipRequests();
+    void            selectRejectFriendshipRequests(BOOL);
+    BOOL            getRejectFriendshipRequests() const;
+private:
+    BOOL            mIsRejectFriendshipRequests;
 
     //--------------------------------------------------------------------
     // Grab

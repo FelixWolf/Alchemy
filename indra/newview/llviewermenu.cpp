@@ -153,6 +153,7 @@
 #include <boost/algorithm/string.hpp>
 #include "llcleanup.h"
 #include "llviewershadermgr.h"
+#include "gltfscenemanager.h"
 // [RLVa:KB] - Checked: 2011-05-22 (RLVa-1.3.1a)
 #include "rlvactions.h"
 #include "rlvhandler.h"
@@ -588,10 +589,8 @@ void init_menus()
         LLGridManager::getInstance()->isInSLBeta());
 
     // *TODO:Also fix cost in llfolderview.cpp for Inventory menus
-    const std::string texture_upload_cost_str = fmt::to_string(LLAgentBenefitsMgr::current().getTextureUploadCost());
     const std::string sound_upload_cost_str = fmt::to_string(LLAgentBenefitsMgr::current().getSoundUploadCost());
     const std::string animation_upload_cost_str = fmt::to_string(LLAgentBenefitsMgr::current().getAnimationUploadCost());
-    gMenuHolder->childSetLabelArg("Upload Image", "[COST]", texture_upload_cost_str);
     gMenuHolder->childSetLabelArg("Upload Sound", "[COST]", sound_upload_cost_str);
     gMenuHolder->childSetLabelArg("Upload Animation", "[COST]", animation_upload_cost_str);
 
@@ -804,9 +803,29 @@ U32 render_type_from_string(std::string render_type)
     {
         return LLPipeline::RENDER_TYPE_SIMPLE;
     }
+    if ("materials" == render_type)
+    {
+        return LLPipeline::RENDER_TYPE_MATERIALS;
+    }
     else if ("alpha" == render_type)
     {
         return LLPipeline::RENDER_TYPE_ALPHA;
+    }
+    else if ("alpha_mask" == render_type)
+    {
+        return LLPipeline::RENDER_TYPE_ALPHA_MASK;
+    }
+    else if ("fullbright_alpha_mask" == render_type)
+    {
+        return LLPipeline::RENDER_TYPE_FULLBRIGHT_ALPHA_MASK;
+    }
+    else if ("fullbright" == render_type)
+    {
+        return LLPipeline::RENDER_TYPE_FULLBRIGHT;
+    }
+    else if ("glow" == render_type)
+    {
+        return LLPipeline::RENDER_TYPE_GLOW;
     }
     else if ("tree" == render_type)
     {
@@ -1059,6 +1078,10 @@ U64 info_display_from_string(std::string info_display)
     else if ("octree" == info_display)
     {
         return LLPipeline::RENDER_DEBUG_OCTREE;
+    }
+    else if ("nodes" == info_display)
+    {
+        return LLPipeline::RENDER_DEBUG_NODES;
     }
     else if ("shadow frusta" == info_display)
     {
@@ -2258,6 +2281,20 @@ class LLAdvancedPurgeShaderCache : public view_listener_t
     {
         LLViewerShaderMgr::instance()->clearShaderCache();
         LLViewerShaderMgr::instance()->setShaders();
+        return true;
+    }
+};
+
+/////////////////////
+// REBUILD TERRAIN //
+/////////////////////
+
+
+class LLAdvancedRebuildTerrain : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        gPipeline.rebuildTerrain();
         return true;
     }
 };
@@ -6498,6 +6535,56 @@ class LLWorldSetDoNotDisturb : public view_listener_t
         return true;
     }
 };
+class LLWorldSetRejectTeleportOffers : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        if (gAgent.isRejectTeleportOffers())
+        {
+            gAgent.setRejectTeleportOffers(false);
+        }
+        else
+        {
+            gAgent.setRejectTeleportOffers(true);
+            LLNotificationsUtil::add("RejectTeleportOffersModeSet");
+        }
+        return true;
+    }
+};
+
+class LLWorldGetRejectTeleportOffers : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        bool new_value = gAgent.isRejectTeleportOffers();
+        return new_value;
+    }
+};
+class LLWorldSetRejectFriendshipRequests : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        if (gAgent.getRejectFriendshipRequests())
+        {
+            gAgent.clearRejectFriendshipRequests();
+        }
+        else
+        {
+            gAgent.setRejectFriendshipRequests();
+            LLNotificationsUtil::add("RejectFriendshipRequestsModeSet");
+        }
+        return true;
+    }
+};
+
+class LLWorldGetRejectFriendshipRequests : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        bool new_value = gAgent.getRejectFriendshipRequests();
+        return new_value;
+    }
+};
 
 class LLWorldCreateLandmark : public view_listener_t
 {
@@ -7599,33 +7686,65 @@ class LLAttachmentDetach : public view_listener_t
     {
         // Called when the user clicked on an object attached to them
         // and selected "Detach".
-        LLViewerObject *object = LLSelectMgr::getInstance()->getSelection()->getPrimaryObject();
+        LLObjectSelectionHandle selection = LLSelectMgr::getInstance()->getSelection();
+        LLViewerObject *object = selection->getPrimaryObject();
         if (!object)
         {
             LL_WARNS() << "handle_detach() - no object to detach" << LL_ENDL;
             return true;
         }
 
-        LLViewerObject *parent = (LLViewerObject*)object->getParent();
+        struct f: public LLSelectedObjectFunctor
+        {
+            f() : mAvatarsInSelection(false) {}
+            virtual bool apply(LLViewerObject* objectp)
+            {
+                if (!objectp)
+                {
+                    return false;
+                }
+
+                if (objectp->isAvatar())
+                {
+                    mAvatarsInSelection = true;
+                    return false;
+                }
+
+                LLViewerObject* parent = (LLViewerObject*)objectp->getParent();
         while (parent)
         {
             if(parent->isAvatar())
             {
                 break;
             }
-            object = parent;
+                    objectp = parent;
             parent = (LLViewerObject*)parent->getParent();
         }
 
-        if (!object)
+                // std::set to avoid dupplicate 'roots' from linksets
+                mRemoveSet.insert(objectp->getAttachmentItemID());
+
+                return true;
+            }
+            bool mAvatarsInSelection;
+            uuid_set_t mRemoveSet;
+        } func;
+        // Probbly can run applyToRootObjects instead,
+        // but previous version of this code worked for any selected object
+        selection->applyToObjects(&func);
+
+        if (func.mAvatarsInSelection)
         {
-            LL_WARNS() << "handle_detach() - no object to detach" << LL_ENDL;
+            // Not possible under normal circumstances
+            // Either avatar selection is ON or has to do with animeshes
+            // Better stop this than mess something
+            LL_WARNS() << "Trying to detach avatar from avatar." << LL_ENDL;
             return true;
         }
 
-        if (object->isAvatar())
+        if (func.mRemoveSet.empty())
         {
-            LL_WARNS() << "Trying to detach avatar from avatar." << LL_ENDL;
+            LL_WARNS() << "handle_detach() - no valid attachments in selection to detach" << LL_ENDL;
             return true;
         }
 
@@ -7640,7 +7759,8 @@ class LLAttachmentDetach : public view_listener_t
         }
 // [/RLVa:KB]
 
-        LLAppearanceMgr::instance().removeItemFromAvatar(object->getAttachmentItemID());
+        uuid_vec_t detach_list(func.mRemoveSet.begin(), func.mRemoveSet.end());
+        LLAppearanceMgr::instance().removeItemsFromAvatar(detach_list);
 
         return true;
     }
@@ -8296,6 +8416,30 @@ class LLAdvancedClickRenderBenchmark: public view_listener_t
     bool handleEvent(const LLSD& userdata)
     {
         gpu_benchmark();
+        return true;
+    }
+};
+
+void hdri_preview();
+
+class LLAdvancedClickHDRIPreview: public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        // open personal lighting floater when previewing an HDRI (keeps HDRI from implicitly unloading when opening build tools)
+        LLFloaterReg::showInstance("env_adjust_snapshot");
+        hdri_preview();
+        return true;
+    }
+};
+
+
+class LLAdvancedClickGLTFScenePreview : public view_listener_t
+{
+    bool handleEvent(const LLSD& userdata)
+    {
+        // open personal lighting floater when previewing an HDRI (keeps HDRI from implicitly unloading when opening build tools)
+        LL::GLTFSceneManager::instance().load();
         return true;
     }
 };
@@ -9710,6 +9854,8 @@ void LLUploadCostCalculator::calculateCost(const std::string& asset_type_str)
 
     if (asset_type_str == "texture")
     {
+        // This use minimal texture cost to allow bulk and
+        // texture upload menu options to be visible
         upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost();
     }
     else if (asset_type_str == "animation")
@@ -9900,6 +10046,8 @@ void initialize_menus()
     view_listener_t::addMenu(new LLViewCheckRenderType(), "View.CheckRenderType");
     view_listener_t::addMenu(new LLViewStatusAway(), "View.Status.CheckAway");
     view_listener_t::addMenu(new LLViewStatusDoNotDisturb(), "View.Status.CheckDoNotDisturb");
+    view_listener_t::addMenu(new LLWorldGetRejectTeleportOffers(), "World.GetRejectTeleportOffers");
+    view_listener_t::addMenu(new LLWorldGetRejectFriendshipRequests(), "World.GetRejectFriendshipRequests");
     view_listener_t::addMenu(new LLViewCheckHUDAttachments(), "View.CheckHUDAttachments");
 // [SL:KB] - Patch: World-RenderExceptions | Checked: Catznip-5.2
     commit.add("View.Blocked", boost::bind(&handle_view_blocked, _2));
@@ -9926,6 +10074,9 @@ void initialize_menus()
     view_listener_t::addMenu(new LLWorldTeleportHome(), "World.TeleportHome");
     view_listener_t::addMenu(new LLWorldSetAway(), "World.SetAway");
     view_listener_t::addMenu(new LLWorldSetDoNotDisturb(), "World.SetDoNotDisturb");
+    view_listener_t::addMenu(new LLWorldSetRejectTeleportOffers(), "World.SetRejectTeleportOffers");
+    view_listener_t::addMenu(new LLWorldSetRejectFriendshipRequests(), "World.SetRejectFriendshipRequests");
+
     view_listener_t::addMenu(new LLWorldLindenHome(), "World.LindenHome");
 
     view_listener_t::addMenu(new LLWorldEnableCreateLandmark(), "World.EnableCreateLandmark");
@@ -10028,7 +10179,10 @@ void initialize_menus()
     view_listener_t::addMenu(new LLAdvancedClickRenderShadowOption(), "Advanced.ClickRenderShadowOption");
     view_listener_t::addMenu(new LLAdvancedClickRenderProfile(), "Advanced.ClickRenderProfile");
     view_listener_t::addMenu(new LLAdvancedClickRenderBenchmark(), "Advanced.ClickRenderBenchmark");
+    view_listener_t::addMenu(new LLAdvancedClickHDRIPreview(), "Advanced.ClickHDRIPreview");
+    view_listener_t::addMenu(new LLAdvancedClickGLTFScenePreview(), "Advanced.ClickGLTFScenePreview");
     view_listener_t::addMenu(new LLAdvancedPurgeShaderCache(), "Advanced.ClearShaderCache");
+    view_listener_t::addMenu(new LLAdvancedRebuildTerrain(), "Advanced.RebuildTerrain");
 
     #ifdef TOGGLE_HACKED_GODLIKE_VIEWER
     view_listener_t::addMenu(new LLAdvancedHandleToggleHackedGodmode(), "Advanced.HandleToggleHackedGodmode");

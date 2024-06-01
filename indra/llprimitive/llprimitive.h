@@ -93,7 +93,7 @@ extern const F32 OBJECT_REV_MIN;
 extern const F32 OBJECT_REV_MAX;
 extern const F32 OBJECT_REV_INC;
 
-extern const char *SCULPT_DEFAULT_TEXTURE;
+extern const LLUUID SCULPT_DEFAULT_TEXTURE;
 
 //============================================================================
 
@@ -191,6 +191,7 @@ public:
     {
         FLAG_BOX_VOLUME     = 0x01, // use a box influence volume
         FLAG_DYNAMIC        = 0x02, // render dynamic objects (avatars) into this Reflection Probe
+        FLAG_MIRROR         = 0x04, // This probe is used for reflections on realtime mirrors.
     };
 
 protected:
@@ -214,11 +215,13 @@ public:
     void setClipDistance(F32 distance) { mClipDistance = llclamp(distance, REFLECTION_PROBE_MIN_CLIP_DISTANCE, REFLECTION_PROBE_MAX_CLIP_DISTANCE); }
     void setIsBox(bool is_box);
     void setIsDynamic(bool is_dynamic);
+    void setIsMirror(bool is_mirror);
 
     F32 getAmbiance() const { return mAmbiance; }
     F32 getClipDistance() const { return mClipDistance; }
     bool getIsBox() const { return (mFlags & FLAG_BOX_VOLUME) != 0; }
     bool getIsDynamic() const { return (mFlags & FLAG_DYNAMIC) != 0; }
+    bool getIsMirror() const { return (mFlags & FLAG_MIRROR) != 0; }
 };
 
 //-------------------------------------------------

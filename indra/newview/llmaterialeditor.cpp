@@ -500,11 +500,7 @@ BOOL LLMaterialEditor::postBuild()
     }
     else
     {
-        S32 upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost();
-        getChild<LLUICtrl>("base_color_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
-        getChild<LLUICtrl>("metallic_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
-        getChild<LLUICtrl>("emissive_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
-        getChild<LLUICtrl>("normal_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
+        refreshUploadCost();
     }
 
     boost::function<void(LLUICtrl*, void*)> changes_callback = [this](LLUICtrl * ctrl, void* userData)
@@ -823,6 +819,37 @@ void LLMaterialEditor::resetUnsavedChanges()
     }
 }
 
+void LLMaterialEditor::refreshUploadCost()
+{
+    mExpectedUploadCost = 0;
+    if (mBaseColorTextureUploadId.notNull() && mBaseColorTextureUploadId == getBaseColorId() && mBaseColorFetched)
+    {
+        S32 upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost(mBaseColorFetched);
+        mExpectedUploadCost += upload_cost;
+        getChild<LLUICtrl>("base_color_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
+    }
+    if (mMetallicTextureUploadId.notNull() && mMetallicTextureUploadId == getMetallicRoughnessId() && mMetallicRoughnessFetched)
+    {
+        S32 upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost(mMetallicRoughnessFetched);
+        mExpectedUploadCost += upload_cost;
+        getChild<LLUICtrl>("metallic_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
+    }
+    if (mEmissiveTextureUploadId.notNull() && mEmissiveTextureUploadId == getEmissiveId() && mEmissiveFetched)
+    {
+        S32 upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost(mEmissiveFetched);
+        mExpectedUploadCost += upload_cost;
+        getChild<LLUICtrl>("emissive_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
+    }
+    if (mNormalTextureUploadId.notNull() && mNormalTextureUploadId == getNormalId() && mNormalFetched)
+    {
+        S32 upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost(mNormalFetched);
+        mExpectedUploadCost += upload_cost;
+        getChild<LLUICtrl>("normal_upload_fee")->setTextArg("[FEE]", llformat("%d", upload_cost));
+    }
+
+    getChild<LLUICtrl>("total_upload_fee")->setTextArg("[FEE]", llformat("%d", mExpectedUploadCost));
+}
+
 void LLMaterialEditor::markChangesUnsaved(U32 dirty_flag)
 {
     mUnsavedChanges |= dirty_flag;
@@ -853,26 +880,15 @@ void LLMaterialEditor::markChangesUnsaved(U32 dirty_flag)
         setCanSave(false);
     }
 
-    S32 upload_texture_count = 0;
-    if (mBaseColorTextureUploadId.notNull() && mBaseColorTextureUploadId == getBaseColorId())
+    if ((dirty_flag & MATERIAL_BASE_COLOR_TEX_DIRTY)
+        || (dirty_flag & MATERIAL_NORMAL_TEX_DIRTY)
+        || (dirty_flag & MATERIAL_METALLIC_ROUGHTNESS_TEX_DIRTY)
+        || (dirty_flag & MATERIAL_EMISIVE_TEX_DIRTY)
+        || (dirty_flag == 0)
+        || (dirty_flag == U32_MAX))
     {
-        upload_texture_count++;
+        refreshUploadCost();
     }
-    if (mMetallicTextureUploadId.notNull() && mMetallicTextureUploadId == getMetallicRoughnessId())
-    {
-        upload_texture_count++;
-    }
-    if (mEmissiveTextureUploadId.notNull() && mEmissiveTextureUploadId == getEmissiveId())
-    {
-        upload_texture_count++;
-    }
-    if (mNormalTextureUploadId.notNull() && mNormalTextureUploadId == getNormalId())
-    {
-        upload_texture_count++;
-    }
-
-    mExpectedUploadCost = upload_texture_count * LLAgentBenefitsMgr::current().getTextureUploadCost();
-    getChild<LLUICtrl>("total_upload_fee")->setTextArg("[FEE]", llformat("%d", mExpectedUploadCost));
 }
 
 void LLMaterialEditor::setCanSaveAs(bool value)
@@ -2139,7 +2155,7 @@ bool can_use_objects_material(LLSelectedTEGetMatData& func, const std::vector<Pe
 
     // Look for the item to base permissions off of
     item_out = nullptr;
-    const bool blank_material = func.mMaterialId == LLGLTFMaterialList::BLANK_MATERIAL_ASSET_ID;
+    const bool blank_material = func.mMaterialId == BLANK_MATERIAL_ASSET_ID;
     if (!blank_material)
     {
         LLAssetIDMatchesWithPerms item_has_perms(func.mMaterialId, ops);
@@ -3510,8 +3526,7 @@ void LLMaterialEditor::saveTexture(LLImageJ2C* img, const std::string& name, con
     std::string buffer;
     buffer.assign((const char*) img->getData(), img->getDataSize());
 
-    U32 expected_upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost();
-
+    U32 expected_upload_cost = LLAgentBenefitsMgr::current().getTextureUploadCost(img);
     LLSD key = getKey();
     std::function<bool(LLUUID itemId, LLSD response, std::string reason)> failed_upload([key](LLUUID assetId, LLSD response, std::string reason)
     {

@@ -4,7 +4,7 @@
 		<menu_item_call label="プロフィール…" name="Profile"/>
 		<menu_item_check label="インベントリ…" name="Inventory"/>
 		<menu_item_call label="新しいインベントリウィンドウ" name="NewInventoryWindow"/>
-		<menu_item_call label="場所…" name="Places"/>
+		<menu_item_check label="場所…" name="Places"/>
 		<menu_item_call label="ピック…" name="Picks"/>
 		<menu_item_call label="体験…" name="Experiences"/>
 		<menu_item_separator/>
@@ -58,6 +58,7 @@
 			<menu label="取り外す" name="Avatar Detach"/>
 			<menu_item_call label="全てを取り外す" name="Detach All"/>
 		</menu>
+		<menu_item_call label="選択された装着物を取り外す" name="Remove Selected Attachments" />
 		<menu_item_separator/>
 		<menu_item_call label="アバターを選択…" name="Avatar Picker"/>
 		<menu_item_separator/>
@@ -101,6 +102,8 @@
 		<menu_item_check label="ブロックリスト" name="Block List"/>
 		<menu_item_separator/>
 		<menu_item_check label="取り込み中" name="Do Not Disturb"/>
+		<menu_item_check label="テレポートのオファーとリクエストを拒否する" name="Automatically reject teleport offers"/>
+		<menu_item_check label="フレンドシップのリクエストを拒否する" name="Reject all friendship requests"/>
 	</menu>
 	<menu label="ワールド" name="World">
 		<menu_item_check label="ポーザー" name="Poser"/>
@@ -108,7 +111,7 @@
 		<menu_item_call label="アニメーションを再同期" name="Resync Animations"/>
 		<menu_item_check label="サウンドエクスプローラー" name="Sound Explorer"/>
 		<menu_item_separator/>
-		<menu_item_call label="現在地をランドマーク" name="Create Landmark Here"/>
+		<menu_item_call label="現在地のランドマークを作成" name="Create Landmark Here"/>
 		<menu_item_call label="行き先…" name="Destinations"/>
 		<menu_item_check label="ワールドマップ" name="World Map"/>
 		<menu_item_check label="ミニマップ" name="Mini-Map"/>
@@ -121,6 +124,11 @@
 		<menu_item_separator/>
 		<menu_item_call label="スナップショット" name="Take Snapshot"/>
 		<menu_item_call label="３６０度スナップショット" name="Capture 360"/>
+		<menu label="ズームレベル" name="Zoom menu">
+			<menu_item_call label="ズームアウト" name="Zoom Out" />
+			<menu_item_call label="デフォルト" name="Zoom Default"/>
+			<menu_item_call label="ズームイン" name="Zoom In"/>
+		</menu>
 		<menu_item_separator/>
 		<menu_item_call label="場所のプロフィール" name="Place Profile"/>
 		<menu_item_call label="土地情報" name="About Land"/>
@@ -141,7 +149,7 @@
 			<menu_item_check label="区画のプロパティ" name="Parcel Properties"/>
 			<menu_item_separator/>
 			<menu_item_check label="被写界深度（ＤｏＦ）のフォーカスを固定する" name="lock_focus_point"/>
-			<menu_item_check label="拡張メニュー" name="Show Advanced Menu"/>
+			<menu_item_check label="高度な操作メニュー" name="Show Advanced Menu"/>
 		</menu>
 		<menu_item_check label="グラフィック性能の最適化…" name="Performance"/>
 		<menu_item_separator/>
@@ -231,6 +239,7 @@
 			<menu_item_check label="権限の詳細を表示する" name="DebugPermissions"/>
 			<menu_item_separator/>
 			<menu_item_check label="自分のオブジェクトだけを選択する" name="Select Only My Objects"/>
+			<menu_item_check label="コピー可能なオブジェクトだけを選択する" name="Select Only Copyable Objects"/>
 			<menu_item_check label="動的オブジェクトだけを選択する" name="Select Only Movable Objects"/>
 			<menu_item_check label="非表示のオブジェクトを選択する" name="Select Invisible Objects"/>
 			<menu_item_check label="反射プローブを選択する" name="Select Reflection Probes"/>
@@ -326,7 +335,7 @@
 		<menu_item_check label="制限…" name="Restrictions"/>
 		<menu_item_check label="文章…" name="Strings"/>
 	</menu>
-	<menu label="拡張" name="Advanced">
+	<menu label="高度な操作" name="Advanced">
 		<menu_item_call label="テクスチャをリベークする" name="Rebake Texture"/>
 		<menu_item_call label="装着物をリフレッシュ" name="Refresh Attachments"/>
 		<menu_item_call label="ＵＩサイズをデフォルトにする" name="Set UI Size to Default"/>
@@ -364,6 +373,11 @@
 		</menu>
 		<menu label="レンダリング種別" name="Rendering Types">
 			<menu_item_check label="シンプル" name="Rendering Type Simple"/>
+			<menu_item_check label="マテリアル" name="Rendering Type Materials"/>
+			<menu_item_check label="アルファマスク" name="Rendering Type Alpha Mask"/>
+			<menu_item_check label="明るさ全開のアルファマスク" name="Rendering Type Fullbright Alpha Mask"/>
+			<menu_item_check label="グロー" name="Rendering Type Glow"/>
+			<menu_item_check label="明るさ全開" name="Rendering Type Glow" />
 			<menu_item_check label="アルファ" name="Rendering Type Alpha"/>
 			<menu_item_check label="樹木" name="Rendering Type Tree"/>
 			<menu_item_check label="アバター" name="Rendering Type Character"/>
@@ -469,11 +483,14 @@
 			<menu_item_check label="周期的な遅いフレーム" name="Periodic Slow Frame"/>
 			<menu_item_call label="フレームのプロフィール" name="Frame Profile"/>
 			<menu_item_call label="ベンチマーク" name="Benchmark"/>
+			<menu_item_call label="ＨＤＲＩプレビュー" name="HDRI Preview"/>
+			<menu_item_call label="ＧＬＴＦシーンプレビュー" name="GLTF Scene Preview"/>
 		</menu>
 		<menu label="メタデータの描画" name="Render Metadata">
 			<menu_item_check label="バウンディングボックス" name="Bounding Boxes"/>
 			<menu_item_check label="普通" name="Normals"/>
 			<menu_item_check label="八分木" name="Octree"/>
+			<menu_item_check label="ＧＬＴＦノード" name="GLTF Nodes"/>
 			<menu_item_check label="シャドウ円錐" name="Shadow Frusta"/>
 			<menu_item_check label="物理的形状" name="Physics Shapes"/>
 			<menu_item_check label="オクルージョン" name="Occlusion"/>
@@ -525,6 +542,7 @@
 			<menu_item_separator/>
 			<menu_item_check label="シェーダーキャッシュを有効化" name="Enable Shader Cache"/>
 			<menu_item_call label="シェーダーキャッシュをクリア" name="Shader Cache Clear"/>
+			<menu_item_call label="地形を再構築" name="Rebuild Terrain"/>
 			<menu_item_separator/>
 			<menu_item_call label="キャッシュを直ちにクリア" name="Cache Clear"/>
 		</menu>
