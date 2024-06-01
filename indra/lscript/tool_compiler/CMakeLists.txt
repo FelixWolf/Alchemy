@@ -28,9 +28,9 @@ set_source_files_properties(${tool_compiler_HEADER_FILES}
 
 list(APPEND tool_compiler_SOURCE_FILES ${tool_compiler_HEADER_FILES})
 
-add_executable(tool_compiler ${tool_compiler_SOURCE_FILES})
+add_executable(lsl_compiler ${tool_compiler_SOURCE_FILES})
 
-target_link_libraries(tool_compiler
+target_link_libraries(lsl_compiler
         llcommon
         llinventory
         llfilesystem
