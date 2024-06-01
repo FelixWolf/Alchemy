@@ -805,7 +805,8 @@ int yyerror(const char *fmt, ...)
 //#define EMIT_CIL_ASSEMBLER
 
 BOOL lscript_compile(const char* src_filename, const char* dst_filename,
-					 const char* err_filename, BOOL compile_to_mono, const char* class_name, BOOL is_god_like)
+					 const char* err_filename, const char* dbg_filename,
+					 BOOL compile_to_mono, const char* class_name, BOOL is_god_like)
 {
 	BOOL			b_parse_ok = FALSE;
 	BOOL			b_dummy = FALSE;
@@ -834,12 +835,9 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 
 		if (b_parse_ok)
 		{
-#ifdef EMERGENCY_DEBUG_PRINTOUTS
-			char compiled[256];
-			sprintf(compiled, "%s.o", src_filename);
 			LLFILE* compfile;
-			compfile = LLFile::fopen(compiled, "w");
-#endif
+			if(dbg_filename)
+                compfile = LLFile::fopen(std::string(dbg_filename), "w");
 
 			if(dst_filename)
 			{
@@ -851,9 +849,9 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 			gScriptp->setClassName(class_name);
 
 			gScopeStringTable = new LLStringTable(16384);
-#ifdef EMERGENCY_DEBUG_PRINTOUTS
-			gScriptp->recurse(compfile, 0, 4, LSCP_PRETTY_PRINT, LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
-#endif
+            if(dbg_filename)
+                gScriptp->recurse(compfile, 0, 4, LSCP_PRETTY_PRINT, LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
+
 			gScriptp->recurse(yyout, 0, 0, LSCP_PRUNE,		 LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
 			gScriptp->recurse(yyout, 0, 0, LSCP_SCOPE_PASS1, LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
 			gScriptp->recurse(yyout, 0, 0, LSCP_SCOPE_PASS2, LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
@@ -861,9 +859,9 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 			if (!gErrorToText.getErrors())
 			{
 				gScriptp->recurse(yyout, 0, 0, LSCP_RESOURCE, LSPRUNE_INVALID,		 b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
-#ifdef EMERGENCY_DEBUG_PRINTOUTS
-				gScriptp->recurse(yyout, 0, 0, LSCP_EMIT_ASSEMBLY, LSPRUNE_INVALID,  b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
-#endif
+                if(dbg_filename)
+                    gScriptp->recurse(yyout, 0, 0, LSCP_EMIT_ASSEMBLY, LSPRUNE_INVALID,  b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
+
 				if(TRUE == compile_to_mono)
 				{
 					gScriptp->recurse(yyout, 0, 0, LSCP_EMIT_CIL_ASSEMBLY, LSPRUNE_INVALID,  b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
@@ -875,9 +873,8 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 			}
 			delete gScopeStringTable;
 			gScopeStringTable = NULL;
-#ifdef EMERGENCY_DEBUG_PRINTOUTS
-			fclose(compfile);
-#endif
+            if(dbg_filename)
+                fclose(compfile);
 		}
 		fclose(yyout);
 		fclose(yyin);
@@ -889,6 +886,13 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 	return b_parse_ok && !gErrorToText.getErrors();
 }
 
+BOOL lscript_compile(const char* src_filename, const char* dst_filename,
+					 const char* err_filename, BOOL compile_to_mono, const char* class_name, BOOL is_god_like)
+{
+    return lscript_compile(src_filename, dst_filename,
+					 err_filename, NULL,
+					 compile_to_mono, class_name, is_god_like);
+}
 
 BOOL lscript_compile(char *filename, BOOL compile_to_mono, BOOL is_god_like = FALSE)
 {

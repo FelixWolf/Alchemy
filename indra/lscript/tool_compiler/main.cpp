@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
         ("file", boost::program_options::value<std::string>(), "input file")
         ("output", boost::program_options::value<std::string>(), "output file")
         ("error", boost::program_options::value<std::string>(), "error file")
+        ("debug", boost::program_options::value<std::string>(), "debug file")
         ("mono", "Compile to mono")
         ("class", boost::program_options::value<std::string>(), "Class ID")
         ("god", "Compile in Godmode");
@@ -117,12 +118,34 @@ int main(int argc, char *argv[])
     }
 
     auto start = std::chrono::high_resolution_clock::now();
-    if(!lscript_compile(vm["file"].as<std::string>().c_str(),
+    bool success;
+    if (vm.count("debug"))
+    {
+        success = lscript_compile(vm["file"].as<std::string>().c_str(),
+                        dst_filename.c_str(),
+                        err_filename.c_str(),
+                        vm["debug"].as<std::string>().c_str(),
+                        vm.count("mono") > 0,
+                        classname.c_str(),
+                        vm.count("god") > 0);
+    }
+    else
+    {
+        success = lscript_compile(vm["file"].as<std::string>().c_str(),
                         dst_filename.c_str(),
                         err_filename.c_str(),
                         vm.count("mono") > 0,
                         classname.c_str(),
-                        vm.count("god") > 0))
+                        vm.count("god") > 0);
+    }
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    if(success)
+    {
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+        std::cout << "Compiled successfully in " << duration.count() << "ms" << std::endl;
+    }
+    else
     {
         std::cout << "Compile failed:" << std::endl;
 
@@ -151,12 +174,6 @@ int main(int argc, char *argv[])
             }
             fclose(fp);
         }
-    }
-    else
-    {
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "Compiled successfully in " << duration.count() << "ms" << std::endl;
     }
 
     //If we weren't asked to output the error file, delete it when we are done
