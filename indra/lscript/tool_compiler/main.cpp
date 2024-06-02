@@ -143,11 +143,11 @@ int main(int argc, char *argv[])
     if(success)
     {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-        std::cout << "Compiled successfully in " << duration.count() << "ms" << std::endl;
+        std::cout << "Compile successful!" << std::endl;
     }
     else
     {
-        std::cout << "Compile failed:" << std::endl;
+        std::cout << "Compile failed." << std::endl;
 
         LLFILE* fp = LLFile::fopen(err_filename, "r");
         if(fp)
@@ -184,5 +184,5 @@ int main(int argc, char *argv[])
             LLFile::remove(err_filename);
         }
     }
-    return 0;
+    return success != true;
 }
