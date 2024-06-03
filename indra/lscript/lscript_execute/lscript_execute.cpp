@@ -89,6 +89,10 @@ LLScriptExecuteLSL2::LLScriptExecuteLSL2(LLFILE *fp)
     }
     fclose(fp);
 
+    mBytecodeSize = filesize;
+    mBytecode = new U8[mBytecodeSize];
+    memcpy(mBytecode, mBuffer, mBytecodeSize);
+
     init();
 }
 

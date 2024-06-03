@@ -822,10 +822,10 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 	init_temp_jumps();
 	gAllocationManager = new LLScriptAllocationManager();
 
-	yyin = LLFile::fopen(std::string(src_filename), "r");
+	yyin = LLFile::fopen(std::string(src_filename), "rb");
 	if (yyin)
 	{
-		yyout = LLFile::fopen(std::string(err_filename), "w");
+		yyout = LLFile::fopen(std::string(err_filename), "wb");
 
 		// Reset the lexer's internal buffering.
 
@@ -835,9 +835,9 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 
 		if (b_parse_ok)
 		{
-			LLFILE* compfile;
+			LLFILE* compfile = nullptr;
 			if(dbg_filename)
-                compfile = LLFile::fopen(std::string(dbg_filename), "w");
+                compfile = LLFile::fopen(std::string(dbg_filename), "wb");
 
 			if(dst_filename)
 			{
@@ -849,7 +849,7 @@ BOOL lscript_compile(const char* src_filename, const char* dst_filename,
 			gScriptp->setClassName(class_name);
 
 			gScopeStringTable = new LLStringTable(16384);
-            if(dbg_filename)
+            if(dbg_filename && compfile)
                 gScriptp->recurse(compfile, 0, 4, LSCP_PRETTY_PRINT, LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
 
 			gScriptp->recurse(yyout, 0, 0, LSCP_PRUNE,		 LSPRUNE_INVALID, b_dummy, NULL, type, type, b_dummy_count, NULL, NULL, 0, NULL, 0, NULL);
