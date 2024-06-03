@@ -528,6 +528,15 @@ bool idle_startup()
                 message_template_path = gDirUtilp->getExpandedFilename(LL_PATH_EXECUTABLE, "app_settings", "message_template.msg");
                 found_template = LLFile::fopen(message_template_path, "r");     /* Flawfinder: ignore */
             }
+        #elif LL_LINUX
+            // On the linux dev builds, unpackaged, the message_template.msg
+            // file will be located in:
+            // build-linux**/newview/packaged/app_settings
+            if (!found_template)
+            {
+                message_template_path = gDirUtilp->getExpandedFilename(LL_PATH_EXECUTABLE, "..", "app_settings", "message_template.msg");
+                found_template = LLFile::fopen(message_template_path, "r");     /* Flawfinder: ignore */
+            }
         #elif LL_DARWIN
             // On Mac dev builds, message_template.msg lives in:
             // indra/build-*/newview/<config>/Second Life/Contents/Resources/app_settings
@@ -585,6 +594,19 @@ bool idle_startup()
                 if (!LLFile::isfile(message_path))
                 {
                     LLMessageConfig::initClass("viewer", gDirUtilp->getExpandedFilename(LL_PATH_EXECUTABLE, "app_settings", ""));
+                }
+                else
+                {
+                    LLMessageConfig::initClass("viewer", gDirUtilp->getExpandedFilename(LL_PATH_APP_SETTINGS, ""));
+                }
+            #elif LL_LINUX
+                // On the windows dev builds, unpackaged, the message.xml file will
+                // be located in indra/build-vc**/newview/<config>/app_settings.
+                std::string message_path = gDirUtilp->getExpandedFilename(LL_PATH_APP_SETTINGS, "message.xml");
+
+                if (!LLFile::isfile(message_path))
+                {
+                    LLMessageConfig::initClass("viewer", gDirUtilp->getExpandedFilename(LL_PATH_EXECUTABLE, ".." ,"app_settings", ""));
                 }
                 else
                 {
