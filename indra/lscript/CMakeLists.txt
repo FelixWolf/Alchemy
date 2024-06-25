@@ -21,7 +21,7 @@ add_subdirectory(lscript_execute)
 
 add_subdirectory(lscript_library)
 
-add_subdirectory(tool_compiler)
+add_subdirectory(tool_compile)
 add_subdirectory(tool_execute)
 
 add_library(lscript INTERFACE)
