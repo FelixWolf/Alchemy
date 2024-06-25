@@ -1,23 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 # Install Alchemy Viewer. This script can install the viewer both
 # system-wide and for an individual user.
 
+build_data_file="build_data.json"
+if [ -f "${build_data_file}" ]; then
+    version=$(sed -n 's/.*"Version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${build_data_file}")
+    channel=$(sed -n 's/.*"Channel"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${build_data_file}")
+    installdir_name=$(echo "$channel" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' )-install
+else
+    echo "Error: File ${build_data_file} not found." >&2
+    exit 1
+fi
+
+echo "Installing ${channel} version ${version}"
+
 VT102_STYLE_NORMAL='\E[0m'
 VT102_COLOR_RED='\E[31m'
 
-SCRIPTSRC=`readlink -f "$0" || echo "$0"`
-RUN_PATH=`dirname "${SCRIPTSRC}" || echo .`
+SCRIPTSRC=$(readlink -f "$0" || echo "$0")
+RUN_PATH=$(dirname "${SCRIPTSRC}" || echo .)
 tarball_path=${RUN_PATH}
 
-function prompt()
+prompt()
 {
-    local prompt=$1
-    local input
+    prompt=$1
 
-    echo -n "$prompt"
+    printf "%s" "$prompt"
 
-    while read input; do
+    while read -r input; do
         case $input in
             [Yy]* )
                 return 1
@@ -27,25 +38,24 @@ function prompt()
                 ;;
             * )
                 echo "Please enter yes or no."
-                echo -n "$prompt"
+                printf "%s" "$prompt"
         esac
     done
 }
 
-function die()
+die()
 {
-    warn $1
+    warn "$1"
     exit 1
 }
 
-function warn()
+warn()
 {
-    echo -n -e $VT102_COLOR_RED
-    echo $1
-    echo -n -e $VT102_STYLE_NORMAL
+    printf "%b%b%b\n" "$VT102_COLOR_RED" "$1" "$VT102_STYLE_NORMAL"
 }
 
-function homedir_install()
+
+homedir_install()
 {
     warn "You are not running as a privileged user, so you will only be able"
     warn "to install Alchemy Viewer in your home directory. If you"
@@ -54,33 +64,37 @@ function homedir_install()
     echo
 
     prompt "Proceed with the installation? [Y/N]: "
-    if [[ $? == 0 ]]; then
-	exit 0
+    if [ $? -eq 0 ]; then
+    exit 0
     fi
 
-    install_to_prefix "$HOME/.local/share/alchemy-install"
-    $HOME/.local/share/alchemy-install/etc/refresh_desktop_app_entry.sh
+    if [ -d "$XDG_DATA_HOME" ] ; then
+        install_to_prefix "$XDG_DATA_HOME/$installdir_name" #$XDG_DATA_HOME is a synonym for $HOME/.local/share/ unless the user has specified otherwise (unlikely).
+    else
+        install_to_prefix "$HOME/.local/share/$installdir_name" #XDG_DATA_HOME not set, so use default path as defined by XDG spec.
+    fi
+
 }
 
-function root_install()
+root_install()
 {
-    local default_prefix="/opt/alchemy-install"
+    
+    default_prefix="/opt/${installdir_name}"
 
-    echo -n "Enter the desired installation directory [${default_prefix}]: ";
-    read
-    if [[ "$REPLY" = "" ]] ; then
-	local install_prefix=$default_prefix
+    printf "Enter the desired installation directory [%s]: " "${default_prefix}"
+    read -r REPLY
+    if [ "$REPLY" = "" ] ; then
+        install_prefix=$default_prefix
     else
-	local install_prefix=$REPLY
+        install_prefix=$REPLY
     fi
 
     install_to_prefix "$install_prefix"
 
     mkdir -p /usr/local/share/applications
-    ${install_prefix}/etc/refresh_desktop_app_entry.sh
 }
 
-function install_to_prefix()
+install_to_prefix()
 {
     test -e "$1" && backup_previous_installation "$1"
     mkdir -p "$1" || die "Failed to create installation directory!"
@@ -88,9 +102,8 @@ function install_to_prefix()
     echo " - Installing to $1"
 
     cp -a "${tarball_path}"/* "$1/" || die "Failed to complete the installation!"
-    
-    SANDBOX_BIN="$1/bin/llplugin/chrome-sandbox"
-    if [ "$UID" == "0" ]; then
+
+    if [ "$(id -u)" = "0" ]; then
         "$1/etc/chrome_sandboxing_permissions_setup.sh"
     else
         echo "                 ╭──────────────────────────────────────────╮"
@@ -115,7 +128,7 @@ function install_to_prefix()
         echo ""
         warn "By refusing this step, you accept this risk."
         prompt "Proceed with enabling web media process sandboxing? [Y/N]: "
-        if [[ $? == 0 ]]; then
+        if [ $? = 0 ]; then
             # Save this choice so that we don't ask for creds on every viewer launch
             touch "$1/bin/llplugin/.user_does_not_want_chrome_sandboxing_and_accepts_the_risks"
             exit 0 
@@ -124,18 +137,30 @@ function install_to_prefix()
         rm "$1/bin/llplugin/.user_does_not_want_chrome_sandboxing_and_accepts_the_risks" 2> /dev/null
         pkexec "$1/etc/chrome_sandboxing_permissions_setup.sh" || die "Failed to set permissions on chrome-sandbox"
     fi
+    "$1"/etc/refresh_desktop_app_entry.sh || echo "Failed to integrate into DE via XDG."
+    set_slurl_handler "$1"
 }
 
-function backup_previous_installation()
+backup_previous_installation()
 {
-    local backup_dir="$1".backup-$(date -I)
+    backup_dir="$1".backup-$(date -I)
     echo " - Backing up previous installation to $backup_dir"
 
     mv "$1" "$backup_dir" || die "Failed to create backup of existing installation!"
 }
 
+set_slurl_handler()
+{
+    install_dir=$1
+    echo
+    prompt "Would you like to set Alchemy as your default SLurl handler? [Y/N]: "
+    if [ $? -eq 0 ]; then
+	exit 0
+    fi
+    "$install_dir"/etc/register_secondlifeprotocol.sh #Successful association comes with a notification to the user.
+}
 
-if [ "$UID" == "0" ]; then
+if [ "$(id -u)" = "0" ]; then
     root_install
 else
     homedir_install

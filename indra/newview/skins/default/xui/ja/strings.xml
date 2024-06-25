@@ -743,7 +743,7 @@ https://secondlife.com/viewer-access-faq
 	</string>
 	<!-- Always mark translate="false" for strings that are nothing but URLs, as they don't need translation. -->
 	<string name="RELEASE_NOTES_BASE_URL" translate="false">
-		https://git.alchemyviewer.org/alchemy/alchemy/releases/
+		https://github.com/AlchemyViewer/Alchemy/releases/tag/
 	</string>
 	<!-- Indicates something is being loaded. Maybe should be merged with RetrievingData -->
 	<string name="LoadingData">
@@ -7677,7 +7677,7 @@ https://alchemyviewer.org/downloads からビューアを再インストール�
 		アニメーションオーバーライド設定を表示します。
 	</string>
 	<string name="Command_Appearance_Tooltip">
-		アバターの外観を変更します。
+		アバターの容姿を変更します。
 	</string>
 	<string name="Command_Avatar_Tooltip">
 		アバター一式を選択します。

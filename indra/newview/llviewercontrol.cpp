@@ -174,10 +174,10 @@ static bool handleSetShaderChanged(const LLSD& newvalue)
     {
         // ALM depends onto atmospheric shaders, state might have changed
         LLPipeline::refreshCachedSettings();
+        gPipeline.releaseGLBuffers();
     }
 
     // else, leave terrain detail as is
-    gPipeline.releaseGLBuffers();
     LLViewerShaderMgr::instance()->setShaders();
     return true;
 }
@@ -600,25 +600,34 @@ bool toggle_agent_pause(const LLSD& newvalue)
     return true;
 }
 
-bool toggle_show_navigation_panel(const LLSD& newvalue)
+bool navigation_panel_change(const LLSD& newvalue)
 {
-    bool value = newvalue.asBoolean();
-
-    LLNavigationBar::getInstance()->setVisible(value);
-    gSavedSettings.setBOOL("ShowMiniLocationPanel", !value);
+    const U32 style = newvalue.asInteger();
+    LLPanelTopInfoBar::getInstance()->setVisible(style == 1);
+    LLNavigationBar::getInstance()->setVisible(style == 2);
     gViewerWindow->reshapeStatusBarContainer();
     return true;
 }
 
-bool toggle_show_mini_location_panel(const LLSD& newvalue)
-{
-    bool value = newvalue.asBoolean();
-
-    LLPanelTopInfoBar::getInstance()->setVisible(value);
-    gSavedSettings.setBOOL("ShowNavbarNavigationPanel", !value);
-
-    return true;
-}
+//bool toggle_show_navigation_panel(const LLSD& newvalue)
+//{
+//    bool value = newvalue.asBoolean();
+//
+//    LLNavigationBar::getInstance()->setVisible(value);
+//    gSavedSettings.setBOOL("ShowMiniLocationPanel", !value);
+//    gViewerWindow->reshapeStatusBarContainer();
+//    return true;
+//}
+//
+//bool toggle_show_mini_location_panel(const LLSD& newvalue)
+//{
+//    bool value = newvalue.asBoolean();
+//
+//    LLPanelTopInfoBar::getInstance()->setVisible(value);
+//    gSavedSettings.setBOOL("ShowNavbarNavigationPanel", !value);
+//
+//    return true;
+//}
 
 bool toggle_show_object_render_cost(const LLSD& newvalue)
 {
@@ -818,7 +827,7 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "RenderReflectionProbeDetail", handleReflectionProbeDetailChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderReflectionsEnabled", handleReflectionProbeDetailChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderScreenSpaceReflections", handleReflectionProbeDetailChanged);
-    setting_setup_signal_listener(gSavedSettings, "RenderMirrors", handleHeroProbeResolutionChanged);
+    setting_setup_signal_listener(gSavedSettings, "RenderMirrors", handleReflectionProbeDetailChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderHeroProbeResolution", handleHeroProbeResolutionChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderShaderCacheEnabled", handleSetShaderChanged);
     setting_setup_signal_listener(gSavedSettings, "RenderShadowDetail", handleSetShaderChanged);
@@ -908,8 +917,9 @@ void settings_setup_listeners()
     setting_setup_signal_listener(gSavedSettings, "QAMode", show_debug_menus);
     setting_setup_signal_listener(gSavedSettings, "UseDebugMenus", show_debug_menus);
     setting_setup_signal_listener(gSavedSettings, "AgentPause", toggle_agent_pause);
-    setting_setup_signal_listener(gSavedSettings, "ShowNavbarNavigationPanel", toggle_show_navigation_panel);
-    setting_setup_signal_listener(gSavedSettings, "ShowMiniLocationPanel", toggle_show_mini_location_panel);
+    setting_setup_signal_listener(gSavedSettings, "NavigationBarStyle", navigation_panel_change);
+    //setting_setup_signal_listener(gSavedSettings, "ShowNavbarNavigationPanel", toggle_show_navigation_panel);
+    //setting_setup_signal_listener(gSavedSettings, "ShowMiniLocationPanel", toggle_show_mini_location_panel);
     setting_setup_signal_listener(gSavedSettings, "ShowObjectRenderingCost", toggle_show_object_render_cost);
     setting_setup_signal_listener(gSavedSettings, "ForceShowGrid", handleForceShowGrid);
     setting_setup_signal_listener(gSavedSettings, "RenderTransparentWater", handleRenderTransparentWaterChanged);

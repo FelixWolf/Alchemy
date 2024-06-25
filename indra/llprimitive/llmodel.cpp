@@ -35,7 +35,7 @@
 #include "llvector4a.h"
 #include "hbxxh.h"
 
-#ifdef LL_USESYSTEMLIBS
+#if defined(LL_USESYSTEMLIBS) || defined(LL_LINUX)
 # include <zlib.h>
 #else
 # include "zlib/zlib.h"
@@ -52,7 +52,7 @@ std::string model_names[] =
 
 const int MODEL_NAMES_LENGTH = sizeof(model_names) / sizeof(std::string);
 
-LLModel::LLModel(LLVolumeParams& params, F32 detail)
+LLModel::LLModel(const LLVolumeParams& params, F32 detail)
     : LLVolume(params, detail),
       mNormalizedScale(1,1,1),
       mNormalizedTranslation(0, 0, 0),

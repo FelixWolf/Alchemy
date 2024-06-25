@@ -451,7 +451,7 @@ class WindowsManifest(ViewerManifest):
         # Plugin host application
         self.path2basename(os.path.join(os.pardir,
                                         'llplugin', 'slplugin', self.args['configuration']),
-                           "slplugin.exe")
+                           "ALPlugin.exe")
         
         # Get shared libs from the shared libs staging directory
         with self.prefix(src=os.path.join(self.args['build'], os.pardir,
@@ -863,7 +863,7 @@ class DarwinManifest(ViewerManifest):
 
                 # our apps
                 executable_path = {}
-                embedded_apps = [ (os.path.join("llplugin", "slplugin"), "SLPlugin.app") ]
+                embedded_apps = [ (os.path.join("llplugin", "slplugin"), "ALPlugin.app") ]
                 for app_bld_dir, app in embedded_apps:
                     self.path2basename(os.path.join(os.pardir,
                                                     app_bld_dir, self.args['configuration']),
@@ -878,8 +878,8 @@ class DarwinManifest(ViewerManifest):
                         for libfile in dylibs:
                             self.relsymlinkf(os.path.join(libfile_parent, libfile))
 
-                # Dullahan helper apps go inside SLPlugin.app
-                with self.prefix(dst=os.path.join("SLPlugin.app", "Contents", "Frameworks")):
+                # Dullahan helper apps go inside ALPlugin.app
+                with self.prefix(dst=os.path.join("ALPlugin.app", "Contents", "Frameworks")):
                     # copy CEF plugin
                     self.path2basename("../media_plugins/cef/" + self.args['configuration'],
                                        "media_plugin_cef.dylib")
@@ -924,12 +924,72 @@ class DarwinManifest(ViewerManifest):
                 pass
             else:
                 # variable found so use it to unlock keychain followed by codesign
-                slplugin_path = os.path.join(application, "Contents", "Resources", "SLPlugin.app")
+                frameworks_path = os.path.join(application, "Contents", "Frameworks")
+                slplugin_path = os.path.join(application, "Contents", "Resources", "ALPlugin.app")
                 home_path = os.environ['HOME']
                 viewer_keychain = os.path.join(home_path, 'Library',
                                                 'Keychains', keychain_name)
                 self.run_command(['security', 'unlock-keychain',
                                     '-p', keychain_pwd, viewer_keychain])
+
+                if self.args['sentry'] == 'ON' or self.args['sentry'] == 'TRUE':
+                    self.run_command(
+                        ['codesign',
+                            '--verbose',
+                            '--force',
+                            '--timestamp',
+                            '--keychain', viewer_keychain,
+                            '--sign', identity,
+                            os.path.join(frameworks_path, "Sentry.framework")])
+
+                if self.args['openal'] == 'ON' or self.args['openal'] == 'TRUE':
+                    self.run_command(
+                        ['codesign',
+                            '--verbose',
+                            '--force',
+                            '--timestamp',
+                            '--keychain', viewer_keychain,
+                            '--sign', identity,
+                            os.path.join(frameworks_path, "libopenal.dylib")])
+
+                    self.run_command(
+                        ['codesign',
+                            '--verbose',
+                            '--force',
+                            '--timestamp',
+                            '--keychain', viewer_keychain,
+                            '--sign', identity,
+                            os.path.join(frameworks_path, "libalut.dylib")])
+
+                if self.args['fmodstudio'] == 'ON' or self.args['fmodstudio'] == 'TRUE':
+                    if self.args['buildtype'].lower() == 'debug':
+                        self.run_command(
+                            ['codesign',
+                                '--verbose',
+                                '--force',
+                                '--timestamp',
+                                '--keychain', viewer_keychain,
+                                '--sign', identity,
+                                os.path.join(frameworks_path, "libfmodL.dylib")])
+                    else:
+                        self.run_command(
+                            ['codesign',
+                                '--verbose',
+                                '--force',
+                                '--timestamp',
+                                '--keychain', viewer_keychain,
+                                '--sign', identity,
+                                os.path.join(frameworks_path, "libfmod.dylib")])
+
+                if self.args['discord'] == 'ON' or self.args['discord'] == 'TRUE':
+                    self.run_command(
+                        ['codesign',
+                            '--verbose',
+                            '--force',
+                            '--timestamp',
+                            '--keychain', viewer_keychain,
+                            '--sign', identity,
+                            os.path.join(frameworks_path, "discord_game_sdk.dylib")])
 
                 self.run_command(
                     ['codesign',
@@ -1124,7 +1184,7 @@ class LinuxManifest(ViewerManifest):
 
         with self.prefix(dst="bin"):
             self.path("alchemy-bin","do-not-directly-run-alchemy-bin")
-            self.path2basename("../llplugin/slplugin", "SLPlugin")
+            self.path2basename("../llplugin/slplugin", "ALPlugin")
             #this copies over the python wrapper script, associated utilities and required libraries, see SL-321, SL-322 and SL-323
             #with self.prefix(src="../viewer_components/manager", dst=""):
             #    self.path("*.py")

@@ -361,6 +361,15 @@ namespace
                 LLViewerTexture* spec_img = node->getObject()->getTESpecularMap(i);
                 faces_per_tex[spec_img->getID()].push_back(i);
                 }
+
+                LLPointer<LLGLTFMaterial> mat = node->getObject()->getTE(i)->getGLTFRenderMaterial();
+                if (mat.notNull())
+                {
+                    for (U32 j = 0; j < LLGLTFMaterial::GLTF_TEXTURE_INFO_COUNT; ++j)
+                    {
+                        faces_per_tex[mat->mTextureId[j]].push_back(i);
+                    }
+                }
             }
 
             for (auto const& it : faces_per_tex)
@@ -408,6 +417,23 @@ namespace
         // *TODO: We want to refresh their attachments too!
     }
 
+    class ALToggleLocationBar : public view_listener_t
+    {
+        bool handleEvent(const LLSD& userdata) override
+        {
+            const U32 val = userdata.asInteger();
+            gSavedSettings.setU32("NavigationBarStyle", val);
+            return true;
+        }
+    };
+
+    class ALCheckLocationBar : public view_listener_t
+    {
+        bool handleEvent(const LLSD& userdata) override
+        {
+            return userdata.asInteger() == (S32)gSavedSettings.getU32("NavigationBarStyle");
+        }
+    };
 }
 
 ////////////////////////////////////////////////////////
@@ -442,4 +468,7 @@ void ALViewerMenu::initialize_menus()
     commit.add("World.SyncAnimations",  [](LLUICtrl* ctrl, const LLSD& param) { world_sync_animations(); });
 
     commit.add("View.ToggleCinematicMode", [](LLUICtrl* ctrl, const LLSD& param) { toggle_cinematic_mode(); });
+
+    view_listener_t::addMenu(new ALToggleLocationBar(), "ToggleLocationBar");
+    view_listener_t::addMenu(new ALCheckLocationBar(), "CheckLocationBar");
 }

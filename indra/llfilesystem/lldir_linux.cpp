@@ -88,21 +88,25 @@ LLDir_Linux::LLDir_Linux()
 #ifdef APP_RO_DATA_DIR
     mAppRODataDir = APP_RO_DATA_DIR;
 #else
-    mAppRODataDir = tmp_str;
-#endif
-    std::string::size_type build_dir_pos = mExecutableDir.rfind("/build-linux-");
+    // Determine the location of the App-Read-Only-Data
+    // Try the working directory then the exe's dir.
+#ifndef AL_SENTRY
+    std::string::size_type build_dir_pos = mExecutableDir.rfind(mDirDelimiter + "build-linux-");
     if (build_dir_pos != std::string::npos)
     {
         // ...we're in a dev checkout
-        mSkinBaseDir = mExecutableDir.substr(0, build_dir_pos) + "/indra/newview/skins";
-        LL_INFOS() << "Running in dev checkout with mSkinBaseDir "
-         << mSkinBaseDir << LL_ENDL;
+        mAppRODataDir = add(mExecutableDir.substr(0, build_dir_pos), "indra", "newview");
+        LL_INFOS() << "Running in dev checkout with mAppRODataDir " << mAppRODataDir << LL_ENDL;
     }
     else
+#endif
     {
         // ...normal installation running
-        mSkinBaseDir = mAppRODataDir + mDirDelimiter + "skins";
+        mAppRODataDir = tmp_str;
     }
+#endif
+
+    mSkinBaseDir = add(mAppRODataDir, "skins");
 
     mOSUserDir = getCurrentUserHome(tmp_str);
     mOSUserAppDir = "";
@@ -201,7 +205,15 @@ void LLDir_Linux::initAppDirs(const std::string &app_name,
         LL_WARNS() << "Couldn't create LL_PATH_CACHE dir " << getExpandedFilename(LL_PATH_CACHE,"") << LL_ENDL;
     }
 
-    mCAFile = getExpandedFilename(LL_PATH_APP_SETTINGS, "ca-bundle.crt");
+    std::string ca_path = gDirUtilp->getExpandedFilename(LL_PATH_APP_SETTINGS, "ca-bundle.crt");
+    if (!LLFile::isfile(ca_path))
+    {
+        mCAFile = gDirUtilp->getExpandedFilename(LL_PATH_EXECUTABLE, ".." ,"app_settings", "ca-bundle.crt");
+    }
+    else
+    {
+        mCAFile = ca_path;
+    }
 }
 
 U32 LLDir_Linux::countFilesInDir(const std::string &dirname, const std::string &mask)
@@ -255,7 +267,7 @@ bool LLDir_Linux::fileExists(const std::string &filename) const
 /*virtual*/ std::string LLDir_Linux::getLLPluginLauncher()
 {
     return gDirUtilp->getExecutableDir() + gDirUtilp->getDirDelimiter() +
-        "SLPlugin";
+        "ALPlugin";
 }
 
 /*virtual*/ std::string LLDir_Linux::getLLPluginFilename(std::string base_name)

@@ -45,7 +45,6 @@ include(UI)
 include(ViewerMiscLibs)
 include(ViewerManager)
 include(VisualLeakDetector)
-include(VulkanGltf)
 include(ZLIBNG)
 include(URIPARSER)
 include(LLPrimitive)
@@ -114,6 +113,7 @@ set(viewer_SOURCE_FILES
     bdfloaterposer.cpp
     bdfloaterposecreator.cpp
     bdposingmotion.cpp
+    fsfloatersearch.cpp
     fslslpreproc.cpp
     fslslpreprocviewer.cpp
     gltfscenemanager.cpp
@@ -130,7 +130,6 @@ set(viewer_SOURCE_FILES
     llagentbenefits.cpp
     llagentcamera.cpp
     llagentdata.cpp
-    llagenthandler.cpp
     llagentlanguage.cpp
     llagentlistener.cpp
     llagentpicksinfo.cpp
@@ -168,7 +167,6 @@ set(viewer_SOURCE_FILES
     llchiclet.cpp
     llchicletbar.cpp
     llclassifiedinfo.cpp
-    llclassifieditem.cpp
     llcofwearables.cpp
     llcolorswatch.cpp
     llcommanddispatcherlistener.cpp
@@ -265,7 +263,6 @@ set(viewer_SOURCE_FILES
     llfloatercreatelandmark.cpp
     llfloaterdeleteprefpreset.cpp
     llfloaterdestinations.cpp
-    llfloaterdirectory.cpp
     llfloaterdisplayname.cpp
     llfloatereditenvironmentbase.cpp
     llfloatereditextdaycycle.cpp
@@ -332,14 +329,12 @@ set(viewer_SOURCE_FILES
     llfloaterperformance.cpp
     llfloaterperms.cpp
     llfloaterprofile.cpp
-    llfloaterprofilelegacy.cpp
     llfloaterpreference.cpp
     llfloaterpreferencesgraphicsadvanced.cpp
     llfloaterpreferenceviewadvanced.cpp
     llfloaterpreviewtrash.cpp
     llfloaterprofiletexture.cpp
     llfloaterprogressview.cpp
-    llfloaterpublishclassified.cpp
     llfloaterregiondebugconsole.cpp
     llfloaterregioninfo.cpp
     llfloaterreporter.cpp
@@ -371,7 +366,6 @@ set(viewer_SOURCE_FILES
     llfloatervoiceeffect.cpp
     llfloatervoicevolume.cpp
     llfloaterwebcontent.cpp
-    llfloaterwebprofile.cpp
     llfloaterwhitelistentry.cpp
     llfloaterwindowsize.cpp
     llfloaterworldmap.cpp
@@ -400,6 +394,7 @@ set(viewer_SOURCE_FILES
     llhudeffectpointat.cpp
     llhudeffecttrail.cpp
     llhudeffectblob.cpp
+    llhudeffectresetskeleton.cpp
     llhudicon.cpp
     llhudmanager.cpp
     llhudnametag.cpp
@@ -489,7 +484,6 @@ set(viewer_SOURCE_FILES
     lloutputmonitorctrl.cpp
     llpanelappearancetab.cpp
     llpanelavatar.cpp
-    llpanelavatarlegacy.cpp
     llpanelavatartag.cpp
     llpanelblockedlist.cpp
     llpanelclassified.cpp
@@ -499,7 +493,6 @@ set(viewer_SOURCE_FILES
     llpaneleditwearable.cpp
     llpanelemojicomplete.cpp
     llpanelenvironment.cpp
-    llpaneleventinfo.cpp
     llpanelexperiencelisteditor.cpp
     llpanelexperiencelog.cpp
     llpanelexperiencepicker.cpp
@@ -539,7 +532,6 @@ set(viewer_SOURCE_FILES
     llpanelpeople.cpp
     llpanelpeoplemenus.cpp
     llpanelpermissions.cpp
-    llpanelpick.cpp
     llpanelplaceinfo.cpp
     llpanelplaceprofile.cpp
     llpanelplaces.cpp
@@ -548,17 +540,8 @@ set(viewer_SOURCE_FILES
     llpanelpresetspulldown.cpp
     llpanelprimmediacontrols.cpp
     llpanelprofile.cpp
-    llpanelprofilelegacy.cpp
     llpanelprofileclassifieds.cpp
     llpanelprofilepicks.cpp
-    llpanelsearchbase.cpp
-    llpanelsearchclassifieds.cpp
-    llpanelsearchevents.cpp
-    llpanelsearchgroups.cpp
-    llpanelsearchlandsales.cpp
-    llpanelsearchpeople.cpp
-    llpanelsearchplaces.cpp
-    llpanelsearchweb.cpp
     llpanelsnapshot.cpp
     llpanelsnapshotinventory.cpp
     llpanelsnapshotlocal.cpp
@@ -591,7 +574,6 @@ set(viewer_SOURCE_FILES
     llpersistentnotificationstorage.cpp
     llphysicsmotion.cpp
     llphysicsshapebuilderutil.cpp
-    llpickitem.cpp
     llpipelinelistener.cpp
     llplacesinventorybridge.cpp
     llplacesinventorypanel.cpp
@@ -608,7 +590,6 @@ set(viewer_SOURCE_FILES
     llpreviewtexture.cpp
     llproductinforequest.cpp
     llprogressview.cpp
-    llprofileimagepicker.cpp
     llrecentpeople.cpp
     llreflectionmap.cpp
     llreflectionmapmanager.cpp
@@ -859,6 +840,7 @@ set(viewer_HEADER_FILES
     bdfloaterposer.h
     bdfloaterposecreator.h
     bdposingmotion.h
+    fsfloatersearch.h
     fslslpreproc.h
     fslslpreprocviewer.h
     gltfscenemanager.h
@@ -914,7 +896,6 @@ set(viewer_HEADER_FILES
     llchiclet.h
     llchicletbar.h
     llclassifiedinfo.h
-    llclassifieditem.h
     llcofwearables.h
     llcolorswatch.h
     llcommanddispatcherlistener.h
@@ -1011,7 +992,6 @@ set(viewer_HEADER_FILES
     llfloatercreatelandmark.h
     llfloaterdeleteprefpreset.h
     llfloaterdestinations.h
-    llfloaterdirectory.h
     llfloaterdisplayname.h
     llfloatereditenvironmentbase.h
     llfloatereditextdaycycle.h
@@ -1081,14 +1061,12 @@ set(viewer_HEADER_FILES
     llfloaterperformance.h
     llfloaterperms.h
     llfloaterprofile.h
-    llfloaterprofilelegacy.h
     llfloaterpreference.h
     llfloaterpreferencesgraphicsadvanced.h
     llfloaterpreferenceviewadvanced.h
     llfloaterpreviewtrash.h
     llfloaterprofiletexture.h
     llfloaterprogressview.h
-    llfloaterpublishclassified.h
     llfloaterregiondebugconsole.h
     llfloaterregioninfo.h
     llfloaterreporter.h
@@ -1120,7 +1098,6 @@ set(viewer_HEADER_FILES
     llfloatervoiceeffect.h
     llfloatervoicevolume.h
     llfloaterwebcontent.h
-    llfloaterwebprofile.h
     llfloaterwhitelistentry.h
     llfloaterwindowsize.h
     llfloaterworldmap.h
@@ -1148,6 +1125,7 @@ set(viewer_HEADER_FILES
     llhudeffectpointat.h
     llhudeffecttrail.h
     llhudeffectblob.h
+    llhudeffectresetskeleton.h
     llhudicon.h
     llhudmanager.h
     llhudnametag.h
@@ -1227,7 +1205,6 @@ set(viewer_HEADER_FILES
     lloutputmonitorctrl.h
     llpanelappearancetab.h
     llpanelavatar.h
-    llpanelavatarlegacy.h
     llpanelavatartag.h
     llpanelblockedlist.h
     llpanelclassified.h
@@ -1237,7 +1214,6 @@ set(viewer_HEADER_FILES
     llpaneleditwearable.h
     llpanelemojicomplete.h
     llpanelenvironment.h
-    llpaneleventinfo.h
     llpanelexperiencelisteditor.h
     llpanelexperiencelog.h
     llpanelexperiencepicker.h
@@ -1278,7 +1254,6 @@ set(viewer_HEADER_FILES
     llpanelpeople.h
     llpanelpeoplemenus.h
     llpanelpermissions.h
-    llpanelpick.h
     llpanelplaceinfo.h
     llpanelplaceprofile.h
     llpanelplaces.h
@@ -1287,17 +1262,8 @@ set(viewer_HEADER_FILES
     llpanelpresetspulldown.h
     llpanelprimmediacontrols.h
     llpanelprofile.h
-    llpanelprofilelegacy.h
     llpanelprofileclassifieds.h
     llpanelprofilepicks.h
-    llpanelsearchbase.h
-    llpanelsearchclassifieds.h
-    llpanelsearchevents.h
-    llpanelsearchgroups.h
-    llpanelsearchlandsales.h
-    llpanelsearchpeople.h
-    llpanelsearchplaces.h
-    llpanelsearchweb.h
     llpanelsnapshot.h
     llpanelteleporthistory.h
     llpaneltiptoast.h
@@ -1325,7 +1291,6 @@ set(viewer_HEADER_FILES
     llpersistentnotificationstorage.h
     llphysicsmotion.h
     llphysicsshapebuilderutil.h
-    llpickitem.h
     llpipelinelistener.h
     llplacesinventorybridge.h
     llplacesinventorypanel.h
@@ -1341,7 +1306,6 @@ set(viewer_HEADER_FILES
     llpreviewsound.h
     llpreviewtexture.h
     llproductinforequest.h
-    llprofileimagepicker.h
     llprogressview.h
     llrecentpeople.h
     llreflectionmap.h
@@ -1583,11 +1547,6 @@ source_group("CMake Rules" FILES ViewerInstall.cmake)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/viewer_version.txt"
            "${VIEWER_SHORT_VERSION}.${VIEWER_VERSION_REVISION}\n")
 
-# if (WINDOWS)
-#  LIST(APPEND viewer_SOURCE_FILES alsquirrelupdater.cpp)
-#  LIST(APPEND viewer_HEADER_FILES alsquirrelupdater.h)
-# endif (WINDOWS)
-
 if (DARWIN)
   LIST(APPEND viewer_SOURCE_FILES llappviewermacosx.cpp)
   LIST(APPEND viewer_SOURCE_FILES llappviewermacosx-objc.mm)
@@ -1818,6 +1777,7 @@ set(viewer_APPSETTINGS_FILES
     packages-info.txt
     featuretable.txt
     featuretable_mac.txt
+    featuretable_linux.txt
     )
 
 source_group("App Settings" FILES ${viewer_APPSETTINGS_FILES})
@@ -1946,7 +1906,7 @@ if (WINDOWS)
       ${CMAKE_CURRENT_SOURCE_DIR}/licenses-win32.txt
       ${CMAKE_CURRENT_SOURCE_DIR}/featuretable.txt
       ${viewer_APPSETTINGS_FILES}
-      SLPlugin
+      ALPlugin
       media_plugin_example
       )
 
@@ -2023,7 +1983,7 @@ if (WINDOWS)
       add_dependencies(${VIEWER_BINARY_NAME} copy_win_scripts)
     endif (EXISTS ${CMAKE_SOURCE_DIR}/copy_win_scripts)
 
-    add_dependencies(${VIEWER_BINARY_NAME} SLPlugin)
+    add_dependencies(${VIEWER_BINARY_NAME} ALPlugin)
 
     # sets the 'working directory' for debugging from visual studio.
     # Condition for version can be moved to requirements once build agents will be updated (see TOOL-3865)
@@ -2147,6 +2107,10 @@ target_link_libraries(${VIEWER_BINARY_NAME}
         ll::versioninfo
         )
 
+if( TARGET ll::sdbus-cpp )
+  target_link_libraries(${VIEWER_BINARY_NAME} PUBLIC ll::sdbus-cpp )
+endif()
+
 if( TARGET ll::nvapi )
   target_link_libraries(${VIEWER_BINARY_NAME} PUBLIC ll::nvapi )
 endif()
@@ -2206,7 +2170,7 @@ if (LINUX)
   # These are the generated targets that are copied to package/
   set(COPY_INPUT_DEPENDENCIES
     ${VIEWER_BINARY_NAME}
-    SLPlugin
+    ALPlugin
     media_plugin_example
     media_plugin_libvlc
     )
@@ -2358,7 +2322,7 @@ if (DARWIN)
       ${CMAKE_CURRENT_SOURCE_DIR}/viewer_manifest.py
     )
 
-  add_dependencies(${VIEWER_BINARY_NAME} SLPlugin)
+  add_dependencies(${VIEWER_BINARY_NAME} ALPlugin)
 
   if (USE_CEF)
       add_dependencies(${VIEWER_BINARY_NAME} media_plugin_cef)

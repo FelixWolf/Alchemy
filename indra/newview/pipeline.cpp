@@ -836,7 +836,10 @@ bool LLPipeline::allocateScreenBuffer(U32 resX, U32 resY, U32 samples)
     { // hacky -- allocate auxillary buffer
 
         gCubeSnapshot = TRUE;
-        mReflectionMapManager.initReflectionMaps();
+        if (sReflectionProbesEnabled)
+        {
+            mReflectionMapManager.initReflectionMaps();
+        }
 
         mRT = &mAuxillaryRT;
         U32 res = mReflectionMapManager.mProbeResolution * 4;  //multiply by 4 because probes will be 16x super sampled
@@ -2019,7 +2022,7 @@ void LLPipeline::updateMovedList(LLDrawable::drawable_vector_t& moved_list)
 {
     LL_PROFILE_ZONE_SCOPED;
     LLDrawable::drawable_vector_t newList; // removing elements in the middle of a vector is a really bad idea. I'll just create a new one and swap it at the end.
-	
+
     for (LLDrawable::drawable_vector_t::iterator iter = moved_list.begin();
          iter != moved_list.end(); )
     {
@@ -8212,16 +8215,15 @@ void LLPipeline::renderDeferredLighting()
                     center.load3(drawablep->getPositionAgent().mV);
                     const F32 *c = center.getF32ptr();
                     F32        s = volume->getLightRadius() * 1.5f;
+                    if (s <= 0.001f)
+                    {
+                        continue;
+                    }
 
                     // send light color to shader in linear space
                     LLColor3 col = volume->getLightLinearColor() * light_scale;
 
                     if (col.magVecSquared() < 0.001f)
-                    {
-                        continue;
-                    }
-
-                    if (s <= 0.001f)
                     {
                         continue;
                     }
