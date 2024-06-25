@@ -89,6 +89,10 @@ LLScriptExecuteLSL2::LLScriptExecuteLSL2(LLFILE *fp)
     }
     fclose(fp);
 
+    mBytecodeSize = filesize;
+    mBytecode = new U8[mBytecodeSize];
+    memcpy(mBytecode, mBuffer, mBytecodeSize);
+
     init();
 }
 
@@ -4029,11 +4033,10 @@ void lscript_run(const std::string& filename, BOOL b_debug)
         // to check how to abort or error out gracefully
         // from this function. XXXTBD
     }
-    LLFILE* file = LLFile::fopen(filename, "r");  /* Flawfinder: ignore */
+    LLFILE* file = LLFile::fopen(filename, "rb");  /* Flawfinder: ignore */
     if(file)
     {
         execute = new LLScriptExecuteLSL2(file);
-        fclose(file);
     }
     if (execute)
     {
@@ -4056,8 +4059,8 @@ void lscript_run(const std::string& filename, BOOL b_debug)
         printf("bp: 0x%X\n", get_register(execute->mBuffer, LREG_BP));
         printf("hr: 0x%X\n", get_register(execute->mBuffer, LREG_HR));
         printf("hp: 0x%X\n", get_register(execute->mBuffer, LREG_HP));
+        printf("faults %d\n", execute->getFaults());
         delete execute;
-        fclose(file);
     }
 }
 

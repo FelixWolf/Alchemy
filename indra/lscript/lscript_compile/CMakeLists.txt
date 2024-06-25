@@ -13,6 +13,7 @@ include(FindCygwin)
 find_program(FLEX flex
              "C:/Program Files/GnuWin32/bin"
              ${CYGWIN_INSTALL_PATH}/bin
+             "C:/cygwin64/bin"
              /bin
              /usr/bin
              /usr/local/bin
@@ -22,6 +23,7 @@ mark_as_advanced(FLEX)
 find_program(BISON bison
              "C:/Program Files/GnuWin32/bin"
              ${CYGWIN_INSTALL_PATH}/bin
+             "C:/cygwin64/bin"
              /bin
              /usr/bin
              /usr/local/bin
@@ -31,6 +33,7 @@ mark_as_advanced(BISON)
 find_program(M4 m4
              "C:/Program Files/GnuWin32/bin"
              ${CYGWIN_INSTALL_PATH}/bin
+             "C:/cygwin64/bin"
              /bin
              /usr/bin
              /usr/local/bin
