@@ -367,7 +367,18 @@ void llAngleBetween(LLScriptLibData *retval, LLScriptLibData *args, const LLUUID
     retval->mFP = std::acos(2 * dotProduct * dotProduct - 1);
 }
 
-//void llSubStringIndex(LLScriptLibData *retval, LLScriptLibData *args, const LLUUID &id)
+void llSubStringIndex(LLScriptLibData *retval, LLScriptLibData *args, const LLUUID &id)
+{
+    retval->mType = LST_INTEGER;
+    retval->mInteger = -1;
+
+    const char* source = args[0].mString;
+    const char* pattern = args[1].mString;
+
+    const char* found = std::strstr(source, pattern);
+    if (found)
+        retval->mInteger = static_cast<int>(found - source);
+}
 //void llListSort(LLScriptLibData *retval, LLScriptLibData *args, const LLUUID &id)
 
 void llGetListLength(LLScriptLibData *retval, LLScriptLibData *args, const LLUUID &id)
@@ -706,7 +717,7 @@ void LSLLibrary::init()
     mLibrary.assignExec("llAsin", llAsin);
 
     mLibrary.assignExec("llAngleBetween", llAngleBetween);
-    //mLibrary.assignExec("llSubStringIndex", "i", "ss");
+    mLibrary.assignExec("llSubStringIndex", llSubStringIndex);
     //mLibrary.assignExec("llListSort", "l", "lii");
 
     mLibrary.assignExec("llGetListLength", llGetListLength);
